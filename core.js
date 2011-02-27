@@ -1,5 +1,9 @@
 var app = require('express').createServer();
 var socket = require('socket.io').listen(app);
+var _ = require('underscore')._,
+    Backbone = require('backbone');
+
+var models = require('./models/models');
 
 require('jade');
 app.set('view engine', 'jade');
@@ -7,7 +11,7 @@ app.set('view options', {layout: false});
 
 //routes
 app.get('/*.(js|css)', function(req, res){
-    res.sendfile("./public"+req.url);
+    res.sendfile("./"+req.url);
 });
 
 app.get('/', function(req, res){
