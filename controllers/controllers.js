@@ -4,7 +4,7 @@ var NodeChatController = {
         this.socket = new io.Socket(null, {port: 8000});
         var mysocket = this.socket;
 
-        this.model = new Models.NodeChatModel();
+        this.model = new models.NodeChatModel();
         this.view = new NodeChatView({model: this.model, socket: this.socket, el: $('#content')});
         var view = this.view;
 

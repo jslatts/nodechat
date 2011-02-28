@@ -20,17 +20,41 @@ app.get('/', function(req, res){
 
 var activeClients = 0;
 
+var nodeChatModel = new models.NodeChatModel();
+
+nodeChatModel.chats.add(new models.ChatEntry({text: 'greetings webling'}));
+nodeChatModel.chats.add(new models.ChatEntry({text: 'how are you today?'}));
+
+console.log("I have " + nodeChatModel.chats.length + " chats");
+
 socket.on('connection', function(client){
     activeClients += 1;
-    socket.broadcast({clients:activeClients});
     client.on('disconnect', function(){clientDisconnect(client)});
     client.on('message', function(msg){chatMessage(client, socket, msg)});
+
+    client.send({
+        event: 'initial',
+        data: nodeChatModel.xport()
+    });
+
+    socket.broadcast({
+        event: 'update',
+        clients: activeClients
+    });
 });
 
 function chatMessage(client, socket, msg){
-    var expandedMsg = msg.name + ": " + msg.text;
-    socket.broadcast({chat:expandedMsg}); 
+    var chat = new models.ChatEntry();
+    chat.mport(msg);
+    nodeChatModel.chats.add(chat);
+
+    var expandedMsg = chat.get("name") + ": " + chat.get("text");
     console.log("(" + client.sessionId + ") " + expandedMsg);
+
+    socket.broadcast({
+        event: 'chat',
+        data:chat.xport()
+    }); 
 }
 
 function clientDisconnect(client) {

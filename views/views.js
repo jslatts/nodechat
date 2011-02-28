@@ -12,7 +12,7 @@ var ChatView = Backbone.View.extend({
     },
 
     render: function() {
-        $(this.el).html(this.model.get("text"));
+        $(this.el).html(this.model.get("name") + ": " + this.model.get("text"));
         return this;
     }
 });
@@ -33,9 +33,8 @@ var NodeChatView = Backbone.View.extend({
     initialize: function(options) {
         _.bindAll(this, 'render');
         this.model.chats.bind('add', this.addChat);
-        this.model.bind('all', this.render);
         this.socket = options.socket;
-        this.clientCountView = new ClientCountView({model: new Models.ClientCountModel(), el: $('#client_count')});
+        this.clientCountView = new ClientCountView({model: new models.ClientCountModel(), el: $('#client_count')});
         this.chatList = $('#chat_list');
     },
 
@@ -52,22 +51,26 @@ var NodeChatView = Backbone.View.extend({
     },
 
     msgReceived: function(message){
-        if (message.clients) {
-            this.clientCountView.model.updateClients(message.clients);
-        }
-        if (message.chat) {
-            var newChatEntry = new Models.ChatEntry({text: message.chat});
-            this.model.chats.add(newChatEntry);
+        switch(message.event) {
+            case 'initial':
+                this.model.mport(message.data);
+                break;
+            case 'chat':
+                var newChatEntry = new models.ChatEntry();
+                newChatEntry.mport(message.data);
+                this.model.chats.add(newChatEntry);
+                break;
+            case 'update':
+                this.clientCountView.model.updateClients(message.clients);
+                break;
         }
     },
 
-    sendMessage: function(message){
+    sendMessage: function(){
         var inputField = $('input[name=message]');
         var nameField = $('input[name=user_name]');
-        var message = new Object();
-        message.name = nameField.val();
-        message.text = inputField.val();
-        this.socket.send(message);
+        var chatEntry = new models.ChatEntry({name: nameField.val(), text: inputField.val()});
+        this.socket.send(chatEntry.xport());
         inputField.val('');
     }
 });
