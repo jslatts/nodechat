@@ -4,7 +4,6 @@
 
 var ChatView = Backbone.View.extend({
     tagName: 'li',
-    template: _.template("<li><%= text%></li>"),
 
     initialize: function(options) {
         _.bindAll(this, 'render');
@@ -31,11 +30,9 @@ var ClientCountView = Backbone.View.extend({
 
 var NodeChatView = Backbone.View.extend({
     initialize: function(options) {
-        _.bindAll(this, 'render');
         this.model.chats.bind('add', this.addChat);
         this.socket = options.socket;
         this.clientCountView = new ClientCountView({model: new models.ClientCountModel(), el: $('#client_count')});
-        this.chatList = $('#chat_list');
     },
 
     events: {
@@ -48,9 +45,9 @@ var NodeChatView = Backbone.View.extend({
     addChat: function(chat) {
         var view = new ChatView({model: chat});
         $('#chat_list').append(view.render().el);
-    },
+    }
 
-    msgReceived: function(message){
+    , msgReceived: function(message){
         switch(message.event) {
             case 'initial':
                 this.model.mport(message.data);

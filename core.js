@@ -1,7 +1,13 @@
-var app = require('express').createServer();
-var socket = require('socket.io').listen(app);
-var _ = require('underscore')._,
-    Backbone = require('backbone');
+var app = require('express').createServer()
+    , socket = require('socket.io').listen(app)
+    , _ = require('underscore')._
+    , Backbone = require('backbone')
+    , redis = require('redis')
+    , redisClient = redis.createClient();
+
+redisClient.on("error", function(err) {
+    console.log("Error " + err);
+});
 
 var models = require('./models/models');
 
@@ -22,10 +28,20 @@ var activeClients = 0;
 
 var nodeChatModel = new models.NodeChatModel();
 
-nodeChatModel.chats.add(new models.ChatEntry({text: 'greetings webling'}));
-nodeChatModel.chats.add(new models.ChatEntry({text: 'how are you today?'}));
+redisClient.get("NodeChatModel:2", function(err, data) {
+    if (err)
+    {
+        console.log("Error: " + err);
+    }
+    else if (data) {
+        nodeChatModel.mport(JSON.parse(data));
+        console.log("Revived " + nodeChatModel.chats.length + " chats");
+    }
+    else {
+        console.log("No data returned for key");
+    }
+});
 
-console.log("I have " + nodeChatModel.chats.length + " chats");
 
 socket.on('connection', function(client){
     activeClients += 1;
@@ -48,8 +64,23 @@ function chatMessage(client, socket, msg){
     chat.mport(msg);
     nodeChatModel.chats.add(chat);
 
+    //Prune old stuff
+    console.log("Length before " + nodeChatModel.chats.length);
+    if (nodeChatModel.chats.length >= 10) 
+    {
+        var length = nodeChatModel.chats.length;
+        while (length >= 10)
+        {
+            nodeChatModel.chats.remove(nodeChatModel.chats.first());
+            length--;
+        }
+    }
+
+    console.log("Length after " + nodeChatModel.chats.length);
+
     var expandedMsg = chat.get("name") + ": " + chat.get("text");
     console.log("(" + client.sessionId + ") " + expandedMsg);
+    redisClient.set("NodeChatModel:2", JSON.stringify(nodeChatModel.xport()), redis.print);
 
     socket.broadcast({
         event: 'chat',
