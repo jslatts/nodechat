@@ -1,44 +1,52 @@
 var app = require('express').createServer()
+    , jade = require('jade')
     , socket = require('socket.io').listen(app)
     , _ = require('underscore')._
     , Backbone = require('backbone')
     , redis = require('redis')
-    , redisClient = redis.createClient();
+    , rc = redis.createClient()
+    , models = require('./models/models');
 
-redisClient.on("error", function(err) {
-    console.log("Error " + err);
+rc.on('error', function(err) {
+    console.log('Error ' + err);
 });
 
-var models = require('./models/models');
 
-require('jade');
+//configure express to use jade
 app.set('view engine', 'jade');
 app.set('view options', {layout: false});
 
-//routes
+
+//setup routes
 app.get('/*.(js|css)', function(req, res){
-    res.sendfile("./"+req.url);
+    res.sendfile('./'+req.url);
 });
 
 app.get('/', function(req, res){
     res.render('index');
 });
 
-var activeClients = 0;
 
+//create local state
+var activeClients = 0;
 var nodeChatModel = new models.NodeChatModel();
 
-redisClient.get("NodeChatModel:2", function(err, data) {
+rc.lrange('chatentries', -10, -1, function(err, data) {
     if (err)
     {
-        console.log("Error: " + err);
+        console.log('Error: ' + err);
     }
     else if (data) {
-        nodeChatModel.mport(JSON.parse(data));
-        console.log("Revived " + nodeChatModel.chats.length + " chats");
+        _.each(data, function(jsonChat) {
+            var chat = new models.ChatEntry();
+            chat.mport(jsonChat);
+            nodeChatModel.chats.add(chat);
+        });
+
+        console.log('Revived ' + nodeChatModel.chats.length + ' chats');
     }
     else {
-        console.log("No data returned for key");
+        console.log('No data returned for key');
     }
 });
 
@@ -62,29 +70,21 @@ socket.on('connection', function(client){
 function chatMessage(client, socket, msg){
     var chat = new models.ChatEntry();
     chat.mport(msg);
-    nodeChatModel.chats.add(chat);
 
-    //Prune old stuff
-    console.log("Length before " + nodeChatModel.chats.length);
-    if (nodeChatModel.chats.length >= 10) 
-    {
-        var length = nodeChatModel.chats.length;
-        while (length >= 10)
-        {
-            nodeChatModel.chats.remove(nodeChatModel.chats.first());
-            length--;
-        }
-    }
+    rc.incr('next.chatentry.id', function(err, newId) {
+        chat.set({id: newId});
+        nodeChatModel.chats.add(chat);
+        
+        var expandedMsg = chat.get('id') + ' ' + chat.get('name') + ': ' + chat.get('text');
+        console.log('(' + client.sessionId + ') ' + expandedMsg);
 
-    console.log("Length after " + nodeChatModel.chats.length);
+        rc.rpush('chatentries', chat.xport(), redis.print);
+        rc.bgsave();
 
-    var expandedMsg = chat.get("name") + ": " + chat.get("text");
-    console.log("(" + client.sessionId + ") " + expandedMsg);
-    redisClient.set("NodeChatModel:2", JSON.stringify(nodeChatModel.xport()), redis.print);
-
-    socket.broadcast({
-        event: 'chat',
-        data:chat.xport()
+        socket.broadcast({
+            event: 'chat',
+            data:chat.xport()
+        }); 
     }); 
 }
 

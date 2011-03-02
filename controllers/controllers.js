@@ -1,4 +1,6 @@
+//
 //Controllers
+//
 var NodeChatController = {
     init: function() {
         this.socket = new io.Socket(null, {port: 8000});
@@ -16,3 +18,11 @@ var NodeChatController = {
         return this;
     }
 };
+
+//
+// Bootstrap the app
+//
+$(document).ready(function () {
+    window.app = NodeChatController.init({});
+});
+
