@@ -9,6 +9,7 @@ html(lang="en")
     script(type="text/javascript", src="/models/models.js")
     script(type="text/javascript", src="/controllers/controllers.js")
     script(type="text/javascript", src="/views/views.js")
+    script(type="text/javascript", src="/nodechat.js")
       body
     #heading
       h1 nodechat
@@ -22,10 +23,10 @@ html(lang="en")
 
       form(method="post", action="#", onsubmit="return false")#messageForm
         p
-          label Name:
-            input(type='text', name='user_name')
+          label Name: 
+            = locals.name
         p
-          label Message:
+          label Message: 
             input(type='text', name='message')
             input(type='submit', value='send')
 
