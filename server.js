@@ -55,8 +55,6 @@ function authenticate(name, pass, fn) {
 }
 
 function restrict(req, res, next) {
-    console.log('req ses' + req.session.user.name);
-    console.log('req ses' + req.session.id);
   if (req.session.user) {
     next();
   } else {
