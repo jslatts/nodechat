@@ -10,16 +10,13 @@ html(lang="en")
     script(type="text/javascript", src="/controllers/controllers.js")
     script(type="text/javascript", src="/views/views.js")
     script(type="text/javascript", src="/nodechat.js")
-      body
+  body
     #heading
       h1 nodechat
     #content
       p 
         | connected clients
         span#client_count 0
-      p
-        | Fun Chat Messages
-        ul#chat_list
 
       form(method="post", action="#", onsubmit="return false")#messageForm
         p
@@ -29,6 +26,8 @@ html(lang="en")
           label Message: 
             input(type='text', name='message')
             input(type='submit', value='send')
-
-    #footer
+      p
+        | Fun Chat Messages
+        div(style='width: 40%; float:right; overflow:hidden; word-wrap: break-word;')#dynamicroom_list
+        div(style='width: 40%; float:left; overflow:hidden; word-wrap: break-word;')#chat_list
 

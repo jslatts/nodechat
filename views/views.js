@@ -2,8 +2,8 @@
 //Views
 //
 
-var ChatView = Backbone.View.extend({
-    tagName: 'li',
+var RoomView = Backbone.View.extend({
+    tagName: 'div',
 
     initialize: function(options) {
         _.bindAll(this, 'render');
@@ -11,7 +11,20 @@ var ChatView = Backbone.View.extend({
     },
 
     render: function() {
-        $(this.el).html(this.model.get("name") + ": " + this.model.get("text"));
+        $(this.el).html(this.model.get('hash') + '@' + this.model.get("time") + " - " + this.model.get("name") + ": " + this.model.get("text"));
+        return this;
+    }
+});
+var ChatView = Backbone.View.extend({
+    tagName: 'div',
+
+    initialize: function(options) {
+        _.bindAll(this, 'render');
+        this.model.bind('all', this.render);
+    },
+
+    render: function() {
+        $(this.el).html(this.model.get("time") + " - " + this.model.get("name") + ": " + this.model.get("text"));
         return this;
     }
 });
@@ -40,8 +53,16 @@ var NodeChatView = Backbone.View.extend({
     }
 
     , addChat: function(chat) {
-        var view = new ChatView({model: chat});
-        $('#chat_list').append(view.render().el);
+        var hash = chat.get('hash');
+        console.log('hash is ' + hash);
+        if(typeof hash != 'undefined' && chat.get('hash') != 'main') {
+            var view = new RoomView({model: chat});
+            $('#dynamicroom_list').prepend(view.render().el);
+        }
+        else {
+            var view = new ChatView({model: chat});
+            $('#chat_list').prepend(view.render().el);
+        }
     }
 
     , msgReceived: function(message){
