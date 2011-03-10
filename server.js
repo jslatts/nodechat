@@ -16,7 +16,7 @@ rc.on('error', function(err) {
 });
 
 redis.debug_mode = false;
-
+ 
 //configure express 
 app.use(express.bodyParser());
 app.use(express.cookieParser());
@@ -190,7 +190,12 @@ function message(client, socket, msg){
             if (cleanName)
                 cleanName = cleanName.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-            var cleanChat = chat.get('text');
+            var cleanChat = chat.get('text') + ' ';
+			
+			
+			
+			
+			
             if (cleanChat)
                 cleanChat = cleanChat.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -204,14 +209,14 @@ function message(client, socket, msg){
                 }
                 else if (udata == 1)
                 {
-                    console.log('Banned: ' + udata);
+                    console.log('Banned: ' + udata); 
                     return;
                 }
                 else {
                     console.log('tp is' + topPoster.name);
                     console.log('count is' + topPoster.count);
                     if (topPoster.name == cleanName && cleanName != 'jslatts') {
-                        if(topPoster.count > 2 || topPoster.lettercount > 100)
+                        if(topPoster.count > 2 || topPoster.lettercount > 140)
                             return; 
                         else {
                             topPoster.count++;
@@ -241,6 +246,7 @@ function message(client, socket, msg){
                             room = cleanChat.substring(hashTagIndex, cleanChat.indexOf(' ', hashTagIndex+1));
                             console.log("hashtag found " + room);
                             chat.set({hash:room});
+							console.log(JSON.stringify(chat));
                         }
 
                         nodeChatModel.chats.add(chat);
