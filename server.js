@@ -296,4 +296,4 @@ function clientDisconnect(client) {
     client.broadcast({clients:activeClients})
 }
 
-app.listen(8000)
+app.listen(80)
