@@ -1,0 +1,17 @@
+!!! 5
+html(lang="en")
+  head
+    title nodechat login
+      body
+    #heading
+      h1 nodechat login
+    #content
+      form(method="post", action="/login")
+        p
+          label Username:
+            input(type='text', name='username')
+        p
+          label Password:
+            input(type='text', name='password')
+        P
+          input(type='submit', value='send')
