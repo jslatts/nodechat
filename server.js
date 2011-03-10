@@ -55,6 +55,8 @@ function authenticate(name, pass, fn) {
 }
 
 function restrict(req, res, next) {
+    console.log('req ses' + req.session.user.name);
+    console.log('req ses' + req.session.id);
   if (req.session.user) {
     next();
   } else {
@@ -186,16 +188,16 @@ function message(client, socket, msg){
         var chat = new models.ChatEntry();
         chat.mport(msg);
         client.connectSession(function(err, data) {
+            if(!data.user)
+                return;
+            if(!data.user.name)
+                return;
             var cleanName = data.user.name;
             if (cleanName)
                 cleanName = cleanName.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
             var cleanChat = chat.get('text') + ' ';
-			
-			
-			
-			
-			
+
             if (cleanChat)
                 cleanChat = cleanChat.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -246,7 +248,7 @@ function message(client, socket, msg){
                             room = cleanChat.substring(hashTagIndex, cleanChat.indexOf(' ', hashTagIndex+1));
                             console.log("hashtag found " + room);
                             chat.set({hash:room});
-							console.log(JSON.stringify(chat));
+                            console.log(JSON.stringify(chat));
                         }
 
                         nodeChatModel.chats.add(chat);
