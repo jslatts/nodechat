@@ -145,11 +145,15 @@ rc.lrange('chatentries', -10, -1, function(err, data) {
 socket.on('connection', function(client){
     // helper function that goes inside your socket connection
     client.connectSession = function(fn) {
-        if (client.request == null)
+        if (!client.request === null || client.request === undefined)
             return;
-        if (!client.request.headers == null)
+        if (client.request.headers === null || client.request.headers === undefined)
             return;
+
         var cookie = client.request.headers.cookie;
+        if (cookie === null || cookie === undefined)
+            return;
+
         var sid = unescape(cookie.match(/connect\.sid=([^;]+)/)[1]);
 
         rc.get(sid, function(err, data) {
@@ -186,9 +190,9 @@ function message(client, socket, msg){
         var chat = new models.ChatEntry();
         chat.mport(msg);
         client.connectSession(function(err, data) {
-            if(!data.user)
+            if(data.user === null || data.user === undefined)
                 return;
-            if(!data.user.name)
+            if(data.user.name === null || data.user.name === undefined)
                 return;
             var cleanName = data.user.name;
             if (cleanName)
