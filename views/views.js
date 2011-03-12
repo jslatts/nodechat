@@ -78,6 +78,9 @@ var NodeChatView = Backbone.View.extend({
             case 'update':
                 this.clientCountView.model.updateClients(message.clients);
                 break;
+            case 'mash':
+                console.log('mash received: ' + message.data );
+                break;
         }
     }
 

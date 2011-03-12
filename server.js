@@ -298,7 +298,8 @@ function getDirectsFromString(chatText) {
 
     var direct = null;
     if(directIndex > -1) {
-        direct = chatText.substring(mashTagIndex, endPos);
+        var endPos = chatText.indexOf(' ', directIndex+1);
+        direct = chatText.substring(directIndex, endPos);
         console.log('Found direct: ' + direct);
     }
 
@@ -313,7 +314,7 @@ function handleMashTags(cleanChat, chat) {
 
             //Create a new mashTag if we need to
             if (!foundTag) {
-                foundTag = new models.MashTagModel({'name': t});
+                foundTag = new models.MashTagModel({'name': mashTags[t]});
                 nodeChatModel.mashTags.add(foundTag);
 
                 rc.incr('next.mashtag.id', function(err, newMashId){
@@ -344,12 +345,12 @@ function getMashTagsFromString(chatText) {
     while(startPos <= chatText.length && mashTagIndex > -1) {
 
         //Grab the tag and push it on the array
-        var endPos = chatText.indexOf(' ', hashTagIndex+1);
+        var endPos = chatText.indexOf(' ', mashTagIndex+1);
         mashTags.push(chatText.substring(mashTagIndex, endPos));
         
         //Setup for the next one
-        mashTagIndex = chatText.indexOf('#', startPos);
         startPos = endPos +1;
+        mashTagIndex = chatText.indexOf('#', startPos);
     }
     
     console.log('Found mashtags: ' + mashTags);
