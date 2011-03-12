@@ -145,25 +145,21 @@ rc.lrange('chatentries', -10, -1, function(err, data) {
 socket.on('connection', function(client){
     // helper function that goes inside your socket connection
     client.connectSession = function(fn) {
-        if (!client.request === null || client.request === undefined)
-            return;
-        if (client.request.headers === null || client.request.headers === undefined)
-            return;
+        if (!client.request) return;
+        if (!client.request.headers) return;
+        if (!client.request.headers.cookie) return;
 
-        var cookie = client.request.headers.cookie;
-        if (cookie === null || cookie === undefined)
-            return;
+        var match = client.request.headers.cookie.match(/connect\.sid=([^;]+)/);
+        if (!match || match.length < 2) return;
 
-        var sid = unescape(cookie.match(/connect\.sid=([^;]+)/)[1]);
+        var sid = unescape(match[1]);
 
         rc.get(sid, function(err, data) {
             fn(err, JSON.parse(data));
         });
     };
 
-
     activeClients += 1;
-    client.on('disconnect', function(){clientDisconnect(client)});
     client.on('message', function(msg){message(client, socket, msg)});
 
     client.send({
@@ -190,6 +186,8 @@ function message(client, socket, msg){
         var chat = new models.ChatEntry();
         chat.mport(msg);
         client.connectSession(function(err, data) {
+            if(data === null || data === undefined)
+                return;
             if(data.user === null || data.user === undefined)
                 return;
             if(data.user.name === null || data.user.name === undefined)
@@ -197,6 +195,16 @@ function message(client, socket, msg){
             var cleanName = data.user.name;
             if (cleanName)
                 cleanName = cleanName.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+            var connectedUser = nodeChatModel.users.find(function(user){return user.get('name') == cleanName;});
+
+            if(!connectedUser) {
+                var newUser = new models.User({'client': client, 'name': cleanName});
+                nodeChatModel.users.add(newUser);
+            
+                //Set disconnect here so we can destroy the user model
+                client.on('disconnect', function(){clientDisconnect(newUser)});
+            }
 
             var cleanChat = chat.get('text') + ' ';
 
@@ -207,10 +215,7 @@ function message(client, socket, msg){
 
             rc.get('userban:'+cleanName, function(err, udata){
                 console.log('here' + cleanName);
-                if (err)
-                {
-                    console.log('Error: ' + err);
-                }
+                if (err) { console.log('Error: ' + err); }
                 else if (udata == 1)
                 {
                     console.log('Banned: ' + udata); 
@@ -239,30 +244,24 @@ function message(client, socket, msg){
                         return;
 
                     rc.incr('next.chatentry.id', function(err, newId) {
-                        chat.set({id: newId, name: cleanName, time:getClockTime(), hash:'main'});
+                        chat.set({id: newId, name: cleanName, time:getClockTime()});
 
-                        var hashTagIndex = cleanChat.indexOf('#');
-                        console.log('index of hash is ' + hashTagIndex);
-                        var room = null;
+                        //If we have hashes, deal with them
+                        handleMashTags(cleanChat, chat); 
+                        var broadcast = handleDirects(cleanChat, chat); 
 
-                        if (hashTagIndex != -1) {
-                            console.log("hashtag found ");
-                            room = cleanChat.substring(hashTagIndex, cleanChat.indexOf(' ', hashTagIndex+1));
-                            console.log("hashtag found " + room);
-                            chat.set({hash:room});
-                            console.log(JSON.stringify(chat));
-                        }
-
-                        nodeChatModel.chats.add(chat);
+                        if(broadcast) {
+                            nodeChatModel.chats.add(chat);
                         
-                        console.log('(' + client.sessionId + ') ' + cleanName + ' ' + cleanChat );
+                            console.log('(' + client.sessionId + ') ' + cleanName + ' ' + cleanChat );
 
-                        rc.rpush('chatentries', chat.xport(), redis.print);
+                            rc.rpush('chatentries', chat.xport(), redis.print);
 
-                        socket.broadcast({
-                            event: 'chat',
-                            data:chat.xport()
-                        }); 
+                            socket.broadcast({
+                                event: 'chat',
+                                data:chat.xport()
+                            }); 
+                        }
                     }); 
                 }
             });
@@ -270,6 +269,103 @@ function message(client, socket, msg){
     }
 }
 
+function handleDirects(cleanChat, chat) {
+    var direct = getDirectsFromString(cleanChat);
+
+    if(direct) {
+        var foundUser = nodeChatModel.users.find(function(user){return user.get('name') == direct;});
+        
+        if (foundUser) {
+            user.directs.add(chat);
+
+            user.client.send({
+                event: 'direct',
+                data: chat.xport()
+            });
+
+            rc.rpush('user:' + user.get('name') + '.directs', chat.xport(), redis.print);
+
+            return false;
+        }
+        else return true;
+    }
+    else
+        return true;
+}
+
+function getDirectsFromString(chatText) {
+    var directIndex = chatText.indexOf('@');
+
+    var direct = null;
+    if(directIndex > -1) {
+        direct = chatText.substring(mashTagIndex, endPos);
+        console.log('Found direct: ' + direct);
+    }
+
+    return direct;
+}
+
+function handleMashTags(cleanChat, chat) {
+    var mashTags = getMashTagsFromString(cleanChat);
+    if(mashTags.length > 0) {
+        for (var t in mashTags) {
+            var foundTag = nodeChatModel.mashTags.find(function(tag){return tag == t;});
+
+            //Create a new mashTag if we need to
+            if (!foundTag) {
+                foundTag = new models.MashTagModel({'name': t});
+                nodeChatModel.mashTags.add(foundTag);
+
+                rc.incr('next.mashtag.id', function(err, newMashId){
+                    foundTag.set({id: newMashId});
+                    socket.broadcast({
+                        event: 'mash',
+                        data: foundTag.xport()
+                    });
+                });
+            } 
+            else {
+                //We already have a mash going. add the chat to the mash
+                foundTag.mashedChats.add(chat);
+                socket.broadcast({
+                    event: 'mash',
+                    data: foundTag.xport()
+                });
+            }
+        }
+    }
+}
+
+function getMashTagsFromString(chatText) {
+    var mashTagIndex = chatText.indexOf('#');
+    var mashTags = new Array();
+    var startPos = 0;
+
+    while(startPos <= chatText.length && mashTagIndex > -1) {
+
+        //Grab the tag and push it on the array
+        var endPos = chatText.indexOf(' ', hashTagIndex+1);
+        mashTags.push(chatText.substring(mashTagIndex, endPos));
+        
+        //Setup for the next one
+        mashTagIndex = chatText.indexOf('#', startPos);
+        startPos = endPos +1;
+    }
+    
+    console.log('Found mashtags: ' + mashTags);
+
+    return mashTags;
+}
+
+//Handle client disconnect by removing user model and decrementing count
+function clientDisconnect(killUser) {
+    nodeChatModel.users.remove(killUser);
+    activeClients -= 1;
+    client.broadcast({clients:activeClients})
+}
+
+
+//Helpers
 function getClockTime()
 {
    var now    = new Date();
@@ -293,9 +389,4 @@ function getClockTime()
    return timeString;
 } // function getClockTime()
 
-function clientDisconnect(client) {
-    activeClients -= 1;
-    client.broadcast({clients:activeClients})
-}
-
-app.listen(80)
+app.listen(8000);

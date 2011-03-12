@@ -54,7 +54,7 @@ var NodeChatView = Backbone.View.extend({
 
     , addChat: function(chat) {
         var hash = chat.get('hash');
-        console.log('hash is ' + hash);
+        //console.log('hash is ' + hash);
         if(typeof hash != 'undefined' && chat.get('hash') != 'main') {
             var view = new RoomView({model: chat});
             $('#dynamicroom_list').prepend(view.render().el);

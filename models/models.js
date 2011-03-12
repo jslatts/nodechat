@@ -15,6 +15,13 @@
     //
     
     models.ChatEntry = Backbone.Model.extend({});
+    
+    //Users have references to their direct chats
+    models.User = Backbone.Model.extend({
+        initialize: function() {
+            this.directs = new models.ChatCollection(); 
+        }
+    });
 
     models.ClientCountModel = Backbone.Model.extend({
         defaults: {
@@ -33,9 +40,17 @@
 
         initialize: function() {
             this.chats = new models.ChatCollection(); 
+            this.mashTags = new models.MashTagCollection(); 
+            this.users = new models.UserCollection();
         }
     });
-
+    
+    //Mashtags have references to their chats
+    models.MashTagModel = Backbone.Model.extend({
+        initialize: function() {
+            this.mashedChats = new models.ChatCollection(); 
+        }
+    });
 
     //
     //Collections
@@ -43,6 +58,14 @@
 
     models.ChatCollection = Backbone.Collection.extend({
         model: models.ChatEntry
+    });
+
+    models.MashTagCollection = Backbone.Collection.extend({
+        model: models.MashTagModel
+    });
+    
+    models.UserCollection = Backbone.Collection.extend({
+        model: models.UserModel
     });
 
     //
