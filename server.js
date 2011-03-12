@@ -46,6 +46,7 @@ function authenticate(name, pass, fn) {
             rc.get('user:' + name + '.password', function(err, data){
                 if (pass == data) {
                     user.pass = pass;
+                    console.log('Auth succeeded for ' + name + ' with password ' + pass);
                     return fn(null, user);
                 }
                 fn(new Error('invalid password'));
@@ -225,9 +226,15 @@ function message(client, socket, msg){
                     console.log('tp is' + topPoster.name);
                     console.log('count is' + topPoster.count);
                     if (topPoster.name == cleanName && cleanName != 'jslatts') {
-                        if(topPoster.count > 2 || topPoster.lettercount > 140)
+                        if(topPoster.count > 5 || topPoster.lettercount > 700)
                             return; 
                         else {
+                            //set a timer to reset this
+                            clearTimeout(topPoster.timeOut);
+                            topPoster.timeOut = setTimeout(function() {
+                                topPoster.count = 0;
+                            },5000);
+
                             topPoster.count++;
                             topPoster.lettercount+=cleanChat.length;
                         }
@@ -310,23 +317,27 @@ function handleMashTags(cleanChat, chat) {
     var mashTags = getMashTagsFromString(cleanChat);
     if(mashTags.length > 0) {
         for (var t in mashTags) {
-            var foundTag = nodeChatModel.mashTags.find(function(tag){return tag == t;});
+            var foundTag = nodeChatModel.mashTags.find(function(tag){return tag.get('name') == mashTags[t];});
 
             //Create a new mashTag if we need to
             if (!foundTag) {
-                foundTag = new models.MashTagModel({'name': mashTags[t]});
-                nodeChatModel.mashTags.add(foundTag);
-
-                rc.incr('next.mashtag.id', function(err, newMashId){
-                    foundTag.set({id: newMashId});
-                    socket.broadcast({
-                        event: 'mash',
-                        data: foundTag.xport()
+                var createTag = function (tagName) {
+                    rc.incr('next.mashtag.id', function(err, newMashId){
+                        foundTag = new models.MashTagModel({'id': newMashId, 'name': tagName});
+                        nodeChatModel.mashTags.add(foundTag);
+                        socket.broadcast({
+                            event: 'mash',
+                            data: foundTag.xport()
+                        });
+                        chat.mashTags.add(foundTag);
                     });
-                });
+                };
+                createTag(mashTags[t]);
             } 
 
+            else {
             chat.mashTags.add(foundTag);
+            }
         }
     }
 }
