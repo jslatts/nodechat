@@ -123,7 +123,7 @@ app.get('/', restrict, function(req, res){
 var activeClients = 0;
 var nodeChatModel = new models.NodeChatModel();
 
-rc.lrange('chatentries', -10, -1, function(err, data) {
+rc.lrange('chatentries', -1000, -1, function(err, data) {
     if (err)
     {
         console.log('Error: ' + err);
@@ -163,21 +163,35 @@ socket.on('connection', function(client){
     activeClients += 1;
     client.on('message', function(msg){message(client, socket, msg)});
 
-    client.send({
-        event: 'initial',
-        data: nodeChatModel.xport()
-    });
 
-    socket.broadcast({
-        event: 'update',
-        clients: activeClients
-    });
+    sendInitialDataToClient(client);
+
 });
 
 var topPoster = {};
 topPoster.name = 'noone';
 topPoster.count = 0;
 topPoster.lettercount = 0;
+
+function sendInitialDataToClient(client) {
+    if (nodeChatModel.chats.length > 100)
+        var chatHistory = nodeChatModel.chats.rest(nodeChatModel.chats.length - 20);
+    else 
+        var chatHistory = nodeChatModel.chats;
+
+    chatHistory.forEach(function(chat) {
+        client.send({
+            event: 'chat',
+            data: chat.xport()
+        });
+    });
+
+    socket.broadcast({
+        event: 'update',
+        clients: activeClients
+    });
+
+}
 
 function message(client, socket, msg){
     if(msg.rediskey) {
@@ -283,14 +297,14 @@ function handleDirects(cleanChat, chat) {
         var foundUser = nodeChatModel.users.find(function(user){return user.get('name') == direct;});
         
         if (foundUser) {
-            user.directs.add(chat);
+            foundUser.directs.add(chat);
 
-            user.client.send({
+            foundUser.get('client').send({
                 event: 'direct',
                 data: chat.xport()
             });
 
-            rc.rpush('user:' + user.get('name') + '.directs', chat.xport(), redis.print);
+            rc.rpush('user:' + foundUser.get('name') + '.directs', chat.xport(), redis.print);
 
             return false;
         }
@@ -306,7 +320,7 @@ function getDirectsFromString(chatText) {
     var direct = null;
     if(directIndex > -1) {
         var endPos = chatText.indexOf(' ', directIndex+1);
-        direct = chatText.substring(directIndex, endPos);
+        direct = chatText.substring(directIndex+1, endPos);
         console.log('Found direct: ' + direct);
     }
 
@@ -402,6 +416,6 @@ function getClockTime()
                     " " +
                     ap;
    return timeString;
-} // function getClockTime()
+}
 
 app.listen(8000);

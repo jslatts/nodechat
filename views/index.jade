@@ -17,17 +17,23 @@ html(lang="en")
       p 
         | connected clients
         span#client_count 0
-
-      form(method="post", action="#", onsubmit="return false")#messageForm
-        p
-          label Name: 
-            = locals.name
-        p
-          label Message: 
-            input(type='text', name='message')
-            input(type='submit', value='send')
       p
-        | Fun Chat Messages
+        label You are connect as: 
+          = locals.name
+
+      div
+        | Secret Chat Messages
+        div(style='width: 100%; float:left; overflow:hidden; word-wrap: break-word;')#direct_list
+
+      div(style='float:left;width:40%')
+        p
+          | Fun Chat Messages
+        div(style='margin-top:10px;width:100%;float:left;clear:both')#chat_list
         div(style='width: 40%; float:right; overflow:hidden; word-wrap: break-word;')#mashtag_list
-        div(style='width: 40%; float:left; overflow:hidden; word-wrap: break-word;')#chat_list
+      div(style='float:left;width:40%;clear:both;')
+        form(method="post", action="#", onsubmit="return false")#messageForm
+          p
+            label Message: 
+              input(type='text', name='message', size='140')
+              input(type='submit', value='send')
 

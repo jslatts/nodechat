@@ -15,8 +15,14 @@
     //
     
     models.ChatEntry = Backbone.Model.extend({
-        initialize: function() {
+        defaults: {
+            'datetime': new Date().getTime()
+        }
+
+        , initialize: function() {
             this.mashTags = new models.MashTagCollection(); 
+            this.set({ htmlId: 'chat_' + this.cid });
+
         }
     });
     
@@ -44,8 +50,11 @@
 
         initialize: function() {
             this.chats = new models.ChatCollection(); 
+            this.chats.comparator = chatComparator;
+
             this.mashTags = new models.MashTagCollection(); 
             this.users = new models.UserCollection();
+            this.directs = new models.ChatCollection();  
         }
     });
     
@@ -59,6 +68,10 @@
     models.ChatCollection = Backbone.Collection.extend({
         model: models.ChatEntry
     });
+
+    var chatComparator = function(chat) {
+        return -chat.get('datetime');
+    }
 
     models.MashTagCollection = Backbone.Collection.extend({
         model: models.MashTagModel
