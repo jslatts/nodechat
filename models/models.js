@@ -14,7 +14,11 @@
     //models
     //
     
-    models.ChatEntry = Backbone.Model.extend({});
+    models.ChatEntry = Backbone.Model.extend({
+        initialize: function() {
+            this.mashTags = new models.MashTagCollection(); 
+        }
+    });
     
     //Users have references to their direct chats
     models.User = Backbone.Model.extend({
@@ -46,11 +50,7 @@
     });
     
     //Mashtags have references to their chats
-    models.MashTagModel = Backbone.Model.extend({
-        initialize: function() {
-            this.mashedChats = new models.ChatCollection(); 
-        }
-    });
+    models.MashTagModel = Backbone.Model.extend({});
 
     //
     //Collections

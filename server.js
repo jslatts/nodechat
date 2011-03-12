@@ -325,14 +325,8 @@ function handleMashTags(cleanChat, chat) {
                     });
                 });
             } 
-            else {
-                //We already have a mash going. add the chat to the mash
-                foundTag.mashedChats.add(chat);
-                socket.broadcast({
-                    event: 'mash',
-                    data: foundTag.xport()
-                });
-            }
+
+            chat.mashTags.add(foundTag);
         }
     }
 }
@@ -360,9 +354,18 @@ function getMashTagsFromString(chatText) {
 
 //Handle client disconnect by removing user model and decrementing count
 function clientDisconnect(killUser) {
-    nodeChatModel.users.remove(killUser);
     activeClients -= 1;
+
+    if(!killUser) return;
+
+    var client = killUser.get('client');
+    if(!client) {
+        console.log('No client found during disconnect. Barf');
+        return;
+    }
+
     client.broadcast({clients:activeClients})
+    nodeChatModel.users.remove(killUser);
 }
 
 

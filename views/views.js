@@ -29,6 +29,20 @@ var ChatView = Backbone.View.extend({
     }
 });
 
+var MashTagView = Backbone.View.extend({
+    tagName: 'div',
+
+    initialize: function(options) {
+        _.bindAll(this, 'render');
+        this.model.bind('all', this.render);
+    },
+
+    render: function() {
+        $(this.el).html(this.model.get("name"));
+        return this;
+    }
+});
+
 var ClientCountView = Backbone.View.extend({
     initialize: function(options) {
         _.bindAll(this, 'render');
@@ -44,6 +58,7 @@ var ClientCountView = Backbone.View.extend({
 var NodeChatView = Backbone.View.extend({
     initialize: function(options) {
         this.model.chats.bind('add', this.addChat);
+        this.model.mashTags.bind('add', this.addMash);
         this.socket = options.socket;
         this.clientCountView = new ClientCountView({model: new models.ClientCountModel(), el: $('#client_count')});
     }
@@ -53,16 +68,13 @@ var NodeChatView = Backbone.View.extend({
     }
 
     , addChat: function(chat) {
-        var hash = chat.get('hash');
-        //console.log('hash is ' + hash);
-        if(typeof hash != 'undefined' && chat.get('hash') != 'main') {
-            var view = new RoomView({model: chat});
-            $('#dynamicroom_list').prepend(view.render().el);
-        }
-        else {
-            var view = new ChatView({model: chat});
-            $('#chat_list').prepend(view.render().el);
-        }
+        var view = new ChatView({model: chat});
+        $('#chat_list').prepend(view.render().el);
+    }
+
+    , addMash: function(mashTag) {
+        var view = new MashTagView({model: mashTag});
+        $('#mashtag_list').prepend(view.render().el);
     }
 
     , msgReceived: function(message){
@@ -71,6 +83,7 @@ var NodeChatView = Backbone.View.extend({
                 this.model.mport(message.data);
                 break;
             case 'chat':
+                console.log('chat received: ' + message.data );
                 var newChatEntry = new models.ChatEntry();
                 newChatEntry.mport(message.data);
                 this.model.chats.add(newChatEntry);
@@ -80,6 +93,12 @@ var NodeChatView = Backbone.View.extend({
                 break;
             case 'mash':
                 console.log('mash received: ' + message.data );
+                var newMash  = new models.MashTagModel();
+                newMash.mport(message.data);
+                this.model.mashTags.add(newMash);
+                break;
+            case 'direct':
+                console.log('direct received: ' + message.data );
                 break;
         }
     }
