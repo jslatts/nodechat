@@ -79,7 +79,7 @@ var NodeChatView = Backbone.View.extend({
 
     , addChat: function(chat) {
         var view = new ChatView({model: chat});
-        $('#chat_list').append(view.render().el);
+        $('#chat_list').insert(view.render().el);
 
         if (chat.mashTags.length > 0) {
             $('#mashtag_chat_list').append(view.render().el);
@@ -112,8 +112,8 @@ var NodeChatView = Backbone.View.extend({
                 this.model.chats.add(newChatEntry);
 
                 //remove old ones if we are getting too long
-                if (this.model.chats.length > 20)
-                    this.model.chats.remove(this.model.chats.last());
+//                if (this.model.chats.length > 20)
+ //                   this.model.chats.remove(this.model.chats.last());
                 break;
             case 'update':
                 this.clientCountView.model.updateClients(message.clients);
