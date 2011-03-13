@@ -1,4 +1,16 @@
-**UPDATES** - I cranked out some quick fixes to the code to try and help with some issues with running the code live on http://nodechat.no.de/. I will get a blog post to over this stuff out as soon as I can, but make sure you pull the older v0.1 tag to go along with the fzysqr.com tutorial.
+If you are following the tutorial on fzysqr.com, make sure to use the v0.1 tag.
 
+Visit http://nodechat.no.de/ for a live demo of the latest version.
+
+Here it the roadmap for the next week or so. Any suggestions or bug fixes are welcome!
+
+TODO:
+
+ - Display a list of logged in users
+ - Finish mash tag deletion
+ - Persist user tag preferences
+ - Persist/restore directs/mashtag subscriptions
+ - Implement UX to display historical mashes
+ - Implement tab notification
 
 -jslatts
