@@ -166,12 +166,21 @@ socket.on('connection', function(client){
         });
     };
 
-    activeClients += 1;
-    client.on('message', function(msg){message(client, socket, msg)});
+    client.connectSession(function(err, data) {
+        if(err) { 
+            console.log('Connection failure'); 
+            return;
+        }
 
+        var connectedUser = getConnectedUser(data, client);
+        if(connectedUser) {
+            client.on('message', function(msg){message(client, socket, msg)});
 
-    sendInitialDataToClient(client);
-
+            sendInitialDataToClient(client);
+        }
+        else 
+            console.log("Failed to connect user");
+        });
 });
 
 var topPoster = {};
@@ -188,20 +197,58 @@ function sendInitialDataToClient(client) {
     console.log('sending ' + chatHistory.length);
 
     chatHistory.forEach(function(chat) {
-        console.log('Revived chat datetime is ', chat.get('datetime'));
         client.send({
             event: 'chat',
             data: chat.xport()
         });
     });
-
-    socket.broadcast({
-        event: 'update',
-        clients: activeClients
-    });
-
 }
 
+function getConnectedUser(data, client) {
+    if(!data) return;
+    if(!data.user) return;
+    if(!data.user.name) return;
+
+    cleanName = data.user.name.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+    var connectedUser = nodeChatModel.users.find(function(user){return user.get('name') == cleanName;});
+
+    if(!connectedUser) {
+        connectedUser = new models.User({'client': client, 'name': cleanName});
+        nodeChatModel.users.add(connectedUser);
+        console.log('new user: ' + connectedUser.get('name'));
+    
+        activeClients += 1;
+        socket.broadcast({
+            event: 'update',
+            clients: activeClients
+        });
+
+        client.on('disconnect', function(){ 
+            clientDisconnect(client, function() {
+                console.log('Removing user from active pool: ' + connectedUser.get('name'));
+                nodeChatModel.users.remove(connectedUser);
+            });
+        });
+    } 
+    else if (connectedUser.get('client') != client){
+        console.log('reassociating');
+        //Looks like the user has a new session for some reason. try and reassociate the model
+        client.removeListener('disconnect');
+
+        //Set disconnect here so we can destroy the user model
+        client.on('disconnect', function(){ 
+            clientDisconnect(client, function() {
+                console.log('Removing user from active pool: ' + connectedUser.get('name'));
+                nodeChatModel.users.remove(connectedUser);
+            });
+        });
+    }
+
+    return connectedUser;
+}
+
+//Handle receipt of client messages over socket
 function message(client, socket, msg){
     if(msg.rediskey) {
         console.log('received from client: ' + msg.rediskey);
@@ -210,34 +257,20 @@ function message(client, socket, msg){
         var chat = new models.ChatEntry();
         chat.mport(msg);
         client.connectSession(function(err, data) {
-            if(!data) return;
-            if(!data.user) return;
-            if(!data.user.name) return;
-
-            var cleanName = data.user.name;
-            if (cleanName)
-                cleanName = cleanName.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-            var connectedUser = nodeChatModel.users.find(function(user){return user.get('name') == cleanName;});
+            var connectedUser = getConnectedUser(data, client);
 
             if(!connectedUser) {
-                connectedUser = new models.User({'client': client, 'name': cleanName});
-                nodeChatModel.users.add(connectedUser);
-                console.log('new user: ' + connectedUser.get('name'));
-            
-                //Set disconnect here so we can destroy the user model
-                client.on('disconnect', function(){clientDisconnect(connectedUser)});
+                console.log('Failed to connect user on message');
             }
 
             var cleanChat = chat.get('text') + ' ';
-
             if (cleanChat)
                 cleanChat = cleanChat.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-            chat.set({'name': cleanName, 'text': cleanChat});
+            var userName = connectedUser.get('name');
+            chat.set({'name': userName, 'text': cleanChat});
 
-            rc.get('userban:'+cleanName, function(err, udata){
-                console.log('here' + cleanName);
+            rc.get('userban:'+userName, function(err, udata){
                 if (err) { console.log('Error: ' + err); }
                 else if (udata == 1)
                 {
@@ -245,9 +278,7 @@ function message(client, socket, msg){
                     return;
                 }
                 else {
-                    console.log('tp is' + topPoster.name);
-                    console.log('count is' + topPoster.count);
-                    if (topPoster.name == cleanName && cleanName != 'jslatts') {
+                    if (topPoster.name == userName && userName != 'jslatts') {
                         if(topPoster.count > 5 || topPoster.lettercount > 700)
                             return; 
                         else {
@@ -262,24 +293,21 @@ function message(client, socket, msg){
                         }
                     }
                     else {
-                        console.log("setting to" + cleanName);
-                        topPoster.name = cleanName;
+                        topPoster.name = userName;
                         topPoster.count = 1;
                         topPoster.lettercount = 1;
                     }
 
-                    console.log('length is ' + chat.get('text').length);
                     if(chat.get('text').length > 140)
                         return;
 
                     rc.incr('next.chatentry.id', function(err, newId) {
-                        chat.set({id: newId, name: cleanName, time:getClockTime()});
-                        chat.set({datetime: new Date().getTime()});
+                        chat.set({id: newId, time:getClockTime(), datetime: new Date().getTime()});
                         console.log(chat.xport());
 
                         //If we have hashes, deal with them
-                        var shouldBroadcast = handleDirects(cleanChat, chat, connectedUser); 
-                        handleMashTags(cleanChat, chat, connectedUser); 
+                        var shouldBroadcast = handleDirects(chat, connectedUser); 
+                        handleMashTags(chat, connectedUser); 
 
                         if (shouldBroadcast)
                             broadcastChat(chat,client);
@@ -304,13 +332,16 @@ var broadcastChat = function(chat, client) {
     }); 
 }
 
-function handleDirects(cleanChat, chat) {
-    var direct = getDirectsFromString(cleanChat);
+function handleDirects(chat, originalUser) {
+    var direct = getDirectsFromString(chat.get('text'));
 
     if(direct) {
+        console.log('looking for direct targer user ' + direct);
         var foundUser = nodeChatModel.users.find(function(user){return user.get('name') == direct;});
         
+        console.log('found user is ' + foundUser);
         if (foundUser) {
+            console.log('Located direct targer user' + foundUser.get('name'));
             foundUser.directs.add(chat);
 
             foundUser.get('client').send({
@@ -320,9 +351,12 @@ function handleDirects(cleanChat, chat) {
 
             rc.rpush('user:' + foundUser.get('name') + '.directs', chat.xport({recurse: false}), redis.print);
 
-            return false;
+            //Send back to the original user
+            originalUser.get('client').send({
+                event: 'direct',
+                data: chat.xport()
+            });
         }
-        else return true;
     }
     else
         return true;
@@ -343,13 +377,13 @@ function getDirectsFromString(chatText) {
 
 //Handles MashTag creation and notification
 //TODO - refactor to use CPS
-function handleMashTags(cleanChat, chat, user) {
+function handleMashTags(chat, user) {
     if(!user) {
         console.log('[handleMashTags] user is null');
         return;
     }
 
-    var mashTags = getMashTagsFromString(cleanChat);
+    var mashTags = getMashTagsFromString(chat.get('text'));
     if(mashTags.length > 0) {
         var alreadyNotifiedUsers = new Array(); //Make sure we only send a multi-tagged chat once
 
@@ -442,20 +476,16 @@ function getMashTagsFromString(chatText) {
     return mashTags;
 }
 
-//Handle client disconnect by removing user model and decrementing count
-function clientDisconnect(killUser) {
+//Handle client disconnect decrementing the count then running the continuation
+function clientDisconnect(client, next) {
     activeClients -= 1;
+    console.log('broadcasting activeClients ' + activeClients, ' client ref is ' + client.sessionId);
+    client.broadcast({
+        event: 'update',
+        clients: activeClients
+    });
 
-    if(!killUser) return;
-
-    var client = killUser.get('client');
-    if(!client) {
-        console.log('No client found during disconnect. Barf');
-        return;
-    }
-
-    client.broadcast({clients:activeClients})
-    nodeChatModel.users.remove(killUser);
+    next();
 }
 
 

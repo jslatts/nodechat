@@ -11,9 +11,16 @@ html(lang="en")
     script(type="text/javascript", src="/views/views.js")
     script(type="text/javascript", src="/nodechat.js")
   body
-    #heading
-      h1 nodechat
-    #content
+    div(style='width:100%;float:left;clear:left')#content
+      div(style='float:right')#help
+        p @user to send direct messages
+          br
+          | #mashtag to subscribe to a topic
+          br
+          | -mashtag to unsubscribe 
+          br
+          a(href='/logout') logout
+      h1(style='margin-top:0px') nodechat
       p 
         | connected clients
         span#client_count 0
@@ -24,7 +31,7 @@ html(lang="en")
       div(style='float:left;width:100%')
         div(style='width:40%; float:right; overflow:hidden; word-wrap: break-word;')
           p
-            | Secret Chats Messages (@)
+            | Super Secret Chat Messages (@)
             #direct_list
           p
             | Mashtags
@@ -33,11 +40,11 @@ html(lang="en")
         div(style='width:40%;float:left;')#chat_list
           p
             | Fun Chat Messages
-      div(style='float:left;width:100%;')
-        form(method="post", action="#", onsubmit="return false")#messageForm
-          p
-            label Message: 
-            br
-            input(type='text', name='message', size='140')
-            input(type='submit', value='send')
+        div(style='float:left;width:40%;clear:both;')
+          form(method="post", action="#", onsubmit="return false")#messageForm
+            p
+              label Message: 
+              br
+              input(type='text', name='message', size='140')
+              input(type='submit', value='send')
 
