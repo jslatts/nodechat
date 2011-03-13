@@ -16,7 +16,7 @@ rc.on('error', function(err) {
 });
 
 redis.debug_mode = false;
-var server_port = 80;
+var server_port = 8000;
  
 //configure express 
 app.use(express.bodyParser());
@@ -296,7 +296,7 @@ var broadcastChat = function(chat, client) {
 
     console.log('[' + client.sessionId + '] ' + chat.xport());
 
-    rc.rpush('chatentries', chat.xport(), redis.print);
+    rc.rpush('chatentries', chat.xport({recurse: false}), redis.print);
 
     socket.broadcast({
         event: 'chat',
@@ -318,7 +318,7 @@ function handleDirects(cleanChat, chat) {
                 data: chat.xport()
             });
 
-            rc.rpush('user:' + foundUser.get('name') + '.directs', chat.xport(), redis.print);
+            rc.rpush('user:' + foundUser.get('name') + '.directs', chat.xport({recurse: false}), redis.print);
 
             return false;
         }
