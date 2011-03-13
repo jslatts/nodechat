@@ -180,7 +180,6 @@ function sendInitialDataToClient(client) {
   //  else 
         var chatHistory = nodeChatModel.chats;
 
-    chatHistory.sort();
     console.log('sending ' + chatHistory.length);
 
     chatHistory.forEach(function(chat) {
