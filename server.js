@@ -175,9 +175,13 @@ topPoster.lettercount = 0;
 
 function sendInitialDataToClient(client) {
     if (nodeChatModel.chats.length > 100)
+        //var chatHistory = nodeChatModel.chats.rest(nodeChatModel.chats.length-20);
         var chatHistory = nodeChatModel.chats.first(20);
     else 
         var chatHistory = nodeChatModel.chats;
+
+    chatHistory.sort();
+    console.log('sending ' + chatHistory.length);
 
     chatHistory.forEach(function(chat) {
         client.send({
@@ -265,7 +269,9 @@ function message(client, socket, msg){
                         return;
 
                     rc.incr('next.chatentry.id', function(err, newId) {
-                        chat.set({id: newId, name: cleanName, time:getClockTime(), datetime:new Date().getTime()});
+                        chat.set({id: newId, name: cleanName, time:getClockTime()});
+                        chat.set({datetime: getTime()});
+                        console.log(chat.xport());
 
                         //If we have hashes, deal with them
                         var shouldBroadcast = handleDirects(cleanChat, chat); 
@@ -278,6 +284,10 @@ function message(client, socket, msg){
             });
         });
     }
+}
+
+function getTime() {
+    return new Date().getTime();
 }
 
 var broadCastChat = function(chat, client) {
@@ -425,4 +435,4 @@ function getClockTime()
    return timeString;
 }
 
-app.listen(80);
+app.listen(8000);

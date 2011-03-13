@@ -15,11 +15,7 @@
     //
     
     models.ChatEntry = Backbone.Model.extend({
-        defaults: {
-            'datetime': (function(){new Date().getTime();})()
-        }
-
-        , initialize: function() {
+        initialize: function() {
             this.mashTags = new models.MashTagCollection(); 
         }
     });
