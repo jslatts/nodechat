@@ -123,7 +123,7 @@ app.get('/', restrict, function(req, res){
 var activeClients = 0;
 var nodeChatModel = new models.NodeChatModel();
 
-rc.lrange('chatentries', -1000, -1, function(err, data) {
+rc.lrange('chatentries', 0, -1, function(err, data) {
     if (err)
     {
         console.log('Error: ' + err);
