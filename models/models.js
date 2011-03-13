@@ -68,7 +68,7 @@
     });
 
     var chatComparator = function(chat) {
-        return -chat.get('datetime');
+        return chat.get('datetime');
     }
 
     models.MashTagCollection = Backbone.Collection.extend({
