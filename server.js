@@ -16,7 +16,7 @@ rc.on('error', function(err) {
 });
 
 redis.debug_mode = false;
-var server_port = 80;
+var server_port = 8000;
  
 //configure express 
 app.use(express.bodyParser());
@@ -175,9 +175,8 @@ topPoster.count = 0;
 topPoster.lettercount = 0;
 
 function sendInitialDataToClient(client) {
-    if (nodeChatModel.chats.length > 20)
-        var chatHistory = nodeChatModel.chats.rest(nodeChatModel.chats.length-20);
-        //var chatHistory = nodeChatModel.chats.first(20);
+    if (nodeChatModel.chats.length > 16)
+        var chatHistory = nodeChatModel.chats.rest(nodeChatModel.chats.length-16);
     else 
         var chatHistory = nodeChatModel.chats;
 
@@ -206,12 +205,10 @@ function message(client, socket, msg){
         var chat = new models.ChatEntry();
         chat.mport(msg);
         client.connectSession(function(err, data) {
-            if(data === null || data === undefined)
-                return;
-            if(data.user === null || data.user === undefined)
-                return;
-            if(data.user.name === null || data.user.name === undefined)
-                return;
+            if(!data) return;
+            if(!data.user) return;
+            if(!data.user.name) return;
+
             var cleanName = data.user.name;
             if (cleanName)
                 cleanName = cleanName.replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -219,11 +216,12 @@ function message(client, socket, msg){
             var connectedUser = nodeChatModel.users.find(function(user){return user.get('name') == cleanName;});
 
             if(!connectedUser) {
-                var newUser = new models.User({'client': client, 'name': cleanName});
-                nodeChatModel.users.add(newUser);
+                connectedUser = new models.User({'client': client, 'name': cleanName});
+                nodeChatModel.users.add(connectedUser);
+                console.log('new user: ' + connectedUser.get('name'));
             
                 //Set disconnect here so we can destroy the user model
-                client.on('disconnect', function(){clientDisconnect(newUser)});
+                client.on('disconnect', function(){clientDisconnect(connectedUser)});
             }
 
             var cleanChat = chat.get('text') + ' ';
@@ -275,10 +273,11 @@ function message(client, socket, msg){
                         console.log(chat.xport());
 
                         //If we have hashes, deal with them
-                        var shouldBroadcast = handleDirects(cleanChat, chat); 
+                        var shouldBroadcast = handleDirects(cleanChat, chat, connectedUser); 
+                        handleMashTags(cleanChat, chat, connectedUser); 
 
                         if (shouldBroadcast)
-                            handleMashTags(cleanChat, chat, client, broadCastChat); 
+                            broadcastChat(chat,client);
 
                     }); 
                 }
@@ -287,7 +286,7 @@ function message(client, socket, msg){
     }
 }
 
-var broadCastChat = function(chat, client) {
+var broadcastChat = function(chat, client) {
     nodeChatModel.chats.add(chat);
 
     console.log('[' + client.sessionId + '] ' + chat.xport());
@@ -337,7 +336,14 @@ function getDirectsFromString(chatText) {
     return direct;
 }
 
-function handleMashTags(cleanChat, chat, client, fn) {
+//Handles MashTag creation and notification
+//TODO - refactor to use CPS
+function handleMashTags(cleanChat, chat, user) {
+    if(!user) {
+        console.log('[handleMashTags] user is null');
+        return;
+    }
+
     var mashTags = getMashTagsFromString(cleanChat);
     if(mashTags.length > 0) {
         for (var t in mashTags) {
@@ -348,24 +354,57 @@ function handleMashTags(cleanChat, chat, client, fn) {
                 var createTag = function (tagName) {
                     rc.incr('next.mashtag.id', function(err, newMashId){
                         foundTag = new models.MashTagModel({'id': newMashId, 'name': tagName});
+
+                        //Add the tag to the global list, the users list (since they submitted it), and the chat message. Then add subcribe the user
+                        //to the mash tag.
                         nodeChatModel.mashTags.add(foundTag);
-                        socket.broadcast({
-                            event: 'mash',
-                            data: foundTag.xport()
+                        user.followedMashTags.add(foundTag);
+                        foundTag.watchingUsers.add(user);
+
+                        //Send the tag back to the user
+                        user.get('client').send({
+                            event: 'mashtag',
+                            data: foundTag.xport({recurse: false})
                         });
 
-                        chat.mashTags.add(foundTag);
+
+                        notifySubscribedMashTagUsers(chat,foundTag);
                     });
                 };
                 createTag(mashTags[t]);
             } 
             else {
-                chat.mashTags.add(foundTag);
+                //In the case the tag exists, check to see if the submitting user has it
+                if(!user.followedMashTags.some(function(t) { return t == foundTag; }))
+                {
+                    user.followedMashTags.add(foundTag);
+
+                    user.get('client').send({
+                        event: 'mashtag',
+                        data: foundTag.xport({recurse: false})
+                    });
+                }
+
+                if(!foundTag.watchingUsers.some(function(u) { return u == user; })) 
+                    foundTag.watchingUsers.add(user);
+
+                //Notify all the subscribed users
+                notifySubscribedMashTagUsers(chat,foundTag);
             }
         }
     }
+}
 
-    fn(chat, client);
+//Send the chat to all currently subscribed users for a mashTag
+function notifySubscribedMashTagUsers(chat, mashTag){
+
+    mashTag.watchingUsers.forEach(function(user){
+        console.log('notifying ' + user.get('name') + ' for chat' + chat.xport());
+        user.get('client').send({
+            event: 'mash',
+            data: chat.xport()
+        });
+    });
 }
 
 function getMashTagsFromString(chatText) {

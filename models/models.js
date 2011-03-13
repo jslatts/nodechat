@@ -14,16 +14,13 @@
     //models
     //
     
-    models.ChatEntry = Backbone.Model.extend({
-        initialize: function() {
-            this.mashTags = new models.MashTagCollection(); 
-        }
-    });
+    models.ChatEntry = Backbone.Model.extend({});
     
     //Users have references to their direct chats
     models.User = Backbone.Model.extend({
         initialize: function() {
             this.directs = new models.ChatCollection(); 
+            this.followedMashTags = new models.MashTagCollection();
         }
     });
 
@@ -38,13 +35,12 @@
     });
 
     models.NodeChatModel = Backbone.Model.extend({
-        defaults: {
-            "clientId": 0
-        },
-
         initialize: function() {
             this.chats = new models.ChatCollection(); 
             this.chats.comparator = chatComparator;
+
+            this.mashes = new models.MashChatCollection(); 
+            this.mashes.comparator = chatComparator;
 
             this.mashTags = new models.MashTagCollection(); 
             this.users = new models.UserCollection();
@@ -53,13 +49,21 @@
     });
     
     //Mashtags have references to their chats
-    models.MashTagModel = Backbone.Model.extend({});
+    models.MashTagModel = Backbone.Model.extend({
+        initialize: function() {
+            this.watchingUsers = new models.UserCollection();
+        }
+    });
 
     //
     //Collections
     //
 
     models.ChatCollection = Backbone.Collection.extend({
+        model: models.ChatEntry
+    });
+
+    models.MashChatCollection = Backbone.Collection.extend({
         model: models.ChatEntry
     });
 

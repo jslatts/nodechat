@@ -35,6 +35,26 @@ var ChatView = Backbone.View.extend({
 
 });
 
+var MashView = Backbone.View.extend({
+    tagName: 'div',
+
+    initialize: function(options) {
+        _.bindAll(this, 'render');
+        this.model.bind('all', this.render);
+        this.model.view = this;
+    }
+
+    , render: function() {
+        $(this.el).text(this.model.get("time") + " - " + this.model.get("name") + ": " + this.model.get("text"));
+        return this;
+    }
+
+    , remove: function() {
+        $(this.el).remove();
+    }
+
+});
+
 var MashTagView = Backbone.View.extend({
     tagName: 'div',
 
@@ -67,7 +87,8 @@ var NodeChatView = Backbone.View.extend({
     initialize: function(options) {
         this.model.chats.bind('add', this.addChat);
         this.model.chats.bind('remove', this.removeChat);
-        this.model.mashTags.bind('add', this.addMash);
+        this.model.mashTags.bind('add', this.addMashTag);
+        this.model.mashes.bind('add', this.addMash);
         this.model.directs.bind('add', this.addDirect);
         this.socket = options.socket;
         this.clientCountView = new ClientCountView({model: new models.ClientCountModel(), el: $('#client_count')});
@@ -80,17 +101,18 @@ var NodeChatView = Backbone.View.extend({
     , addChat: function(chat) {
         var view = new ChatView({model: chat});
         $('#chat_list').append(view.render().el);
+    }
 
-        if (chat.mashTags.length > 0) {
-            $('#mashtag_chat_list').append(view.render().el);
-        }
+    , addMash: function(mash) {
+        var view = new MashView({model: mash});
+        $('#mashtag_chat_list').append(view.render().el);
     }
 
     , removeChat: function(chat) {
         chat.view.remove();
     }
 
-    , addMash: function(mashTag) {
+    , addMashTag: function(mashTag) {
         var view = new MashTagView({model: mashTag});
         $('#mashtag_list').append(view.render().el);
     }
@@ -112,13 +134,23 @@ var NodeChatView = Backbone.View.extend({
                 this.model.chats.add(newChatEntry);
 
                 //remove old ones if we are getting too long
-                if (this.model.chats.length > 20)
+                if (this.model.chats.length > 16)
                     this.model.chats.remove(this.model.chats.first());
+                break;
+            case 'mash':
+                console.log('mash received: ' + message.data );
+                var mashEntry = new models.ChatEntry();
+                mashEntry.mport(message.data);
+                this.model.mashes.add(mashEntry);
+
+                //remove old ones if we are getting too long
+                if (this.model.mashes.length > 16)
+                    this.model.mashes.remove(this.model.mashes.first());
                 break;
             case 'update':
                 this.clientCountView.model.updateClients(message.clients);
                 break;
-            case 'mash':
+            case 'mashtag':
                 console.log('mash received: ' + message.data );
                 var newMash  = new models.MashTagModel();
                 newMash.mport(message.data);
