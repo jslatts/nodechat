@@ -108,7 +108,7 @@ app.post('/login', function(req, res){
   });
 });
 
-app.get('/*.(js|css)', function(req, res){
+app.get('/*.(js|css|swf)', function(req, res){
     res.sendfile('./'+req.url);
 });
 
@@ -268,26 +268,29 @@ function message(client, socket, msg){
                         chat.set({id: newId, name: cleanName, time:getClockTime()});
 
                         //If we have hashes, deal with them
-                        handleMashTags(cleanChat, chat); 
-                        var broadcast = handleDirects(cleanChat, chat); 
+                        var shouldBroadcast = handleDirects(cleanChat, chat); 
 
-                        if(broadcast) {
-                            nodeChatModel.chats.add(chat);
-                        
-                            console.log('(' + client.sessionId + ') ' + cleanName + ' ' + cleanChat );
+                        if (shouldBroadcast)
+                            handleMashTags(cleanChat, chat, client, broadCastChat); 
 
-                            rc.rpush('chatentries', chat.xport(), redis.print);
-
-                            socket.broadcast({
-                                event: 'chat',
-                                data:chat.xport()
-                            }); 
-                        }
                     }); 
                 }
             });
         });
     }
+}
+
+var broadCastChat = function(chat, client) {
+    nodeChatModel.chats.add(chat);
+
+    console.log('[' + client.sessionId + '] ' + chat.xport());
+
+    rc.rpush('chatentries', chat.xport(), redis.print);
+
+    socket.broadcast({
+        event: 'chat',
+        data:chat.xport()
+    }); 
 }
 
 function handleDirects(cleanChat, chat) {
@@ -327,7 +330,7 @@ function getDirectsFromString(chatText) {
     return direct;
 }
 
-function handleMashTags(cleanChat, chat) {
+function handleMashTags(cleanChat, chat, client, fn) {
     var mashTags = getMashTagsFromString(cleanChat);
     if(mashTags.length > 0) {
         for (var t in mashTags) {
@@ -344,15 +347,19 @@ function handleMashTags(cleanChat, chat) {
                             data: foundTag.xport()
                         });
                         chat.mashTags.add(foundTag);
+                        fn(chat, client);
                     });
                 };
                 createTag(mashTags[t]);
             } 
-
             else {
-            chat.mashTags.add(foundTag);
+                chat.mashTags.add(foundTag);
+                fn(chat, client);
             }
         }
+    }
+    else {
+        fn(chat, client);
     }
 }
 

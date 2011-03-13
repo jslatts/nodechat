@@ -21,13 +21,18 @@ var ChatView = Backbone.View.extend({
     initialize: function(options) {
         _.bindAll(this, 'render');
         this.model.bind('all', this.render);
-    },
+        this.model.view = this;
+    }
 
-    render: function() {
+    , render: function() {
         $(this.el).text(this.model.get("time") + " - " + this.model.get("name") + ": " + this.model.get("text"));
-        $(this.el).attr('id', this.model.get('htmlId'));
         return this;
     }
+
+    , remove: function() {
+        $(this.el).remove();
+    }
+
 });
 
 var MashTagView = Backbone.View.extend({
@@ -40,6 +45,8 @@ var MashTagView = Backbone.View.extend({
 
     render: function() {
         $(this.el).html(this.model.get("name"));
+        $(this.el).css('float', 'left');
+        $(this.el).css('margin-right', '5px');
         return this;
     }
 });
@@ -72,17 +79,20 @@ var NodeChatView = Backbone.View.extend({
 
     , addChat: function(chat) {
         var view = new ChatView({model: chat});
-
         $('#chat_list').append(view.render().el);
+
+        if (chat.mashTags.length > 0) {
+            $('#mashtag_chat_list').append(view.render().el);
+        }
     }
 
     , removeChat: function(chat) {
-        $('#' + chat.get('htmlId')).remove();
+        chat.view.remove();
     }
 
     , addMash: function(mashTag) {
         var view = new MashTagView({model: mashTag});
-        $('#mashtag_list').prepend(view.render().el);
+        $('#mashtag_list').append(view.render().el);
     }
 
     , addDirect: function(direct) {

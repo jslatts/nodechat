@@ -5,7 +5,7 @@ html(lang="en")
     script(type="text/javascript", src="/lib/jquery-1.5.1.js")
     script(type="text/javascript", src="/lib/underscore.js")
     script(type="text/javascript", src="/lib/backbone.js")
-    script(type="text/javascript", src="http://cdn.socket.io/stable/socket.io.js")
+    script(type="text/javascript", src="/socket.io/socket.io.js")
     script(type="text/javascript", src="/models/models.js")
     script(type="text/javascript", src="/controllers/controllers.js")
     script(type="text/javascript", src="/views/views.js")
@@ -25,12 +25,16 @@ html(lang="en")
         | Secret Chat Messages
         div(style='width: 100%; float:left; overflow:hidden; word-wrap: break-word;')#direct_list
 
-      div(style='float:left;width:40%')
-        p
-          | Fun Chat Messages
-        div(style='margin-top:10px;width:100%;float:left;clear:both')#chat_list
-        div(style='width: 40%; float:right; overflow:hidden; word-wrap: break-word;')#mashtag_list
-      div(style='float:left;width:40%;clear:both;')
+      div(style='float:left;width:100%')
+        div(style='width:40%; float:right; overflow:hidden; word-wrap: break-word;')
+          p
+            | Mashtags
+            #mashtag_list
+          div(style='width:100%;float:left;')#mashtag_chat_list
+        div(style='width:40%;float:left;')#chat_list
+          p
+            | Fun Chat Messages
+      div(style='float:left;width:40%;')
         form(method="post", action="#", onsubmit="return false")#messageForm
           p
             label Message: 
