@@ -174,10 +174,10 @@ topPoster.count = 0;
 topPoster.lettercount = 0;
 
 function sendInitialDataToClient(client) {
-    if (nodeChatModel.chats.length > 100)
-        var chatHistory = nodeChatModel.chats.rest(nodeChatModel.chats.length-20);
+//    if (nodeChatModel.chats.length > 100)
+ //       var chatHistory = nodeChatModel.chats.rest(nodeChatModel.chats.length-20);
         //var chatHistory = nodeChatModel.chats.first(20);
-    else 
+  //  else 
         var chatHistory = nodeChatModel.chats;
 
     chatHistory.sort();

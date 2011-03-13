@@ -44,7 +44,7 @@
 
         initialize: function() {
             this.chats = new models.ChatCollection(); 
-            this.chats.comparator = chatComparator;
+//            this.chats.comparator = chatComparator;
 
             this.mashTags = new models.MashTagCollection(); 
             this.users = new models.UserCollection();
