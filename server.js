@@ -175,7 +175,7 @@ topPoster.lettercount = 0;
 
 function sendInitialDataToClient(client) {
     if (nodeChatModel.chats.length > 100)
-        var chatHistory = nodeChatModel.chats.rest(nodeChatModel.chats.length - 20);
+        var chatHistory = nodeChatModel.chats.first(20);
     else 
         var chatHistory = nodeChatModel.chats;
 
@@ -265,7 +265,7 @@ function message(client, socket, msg){
                         return;
 
                     rc.incr('next.chatentry.id', function(err, newId) {
-                        chat.set({id: newId, name: cleanName, time:getClockTime()});
+                        chat.set({id: newId, name: cleanName, time:getClockTime(), datetime:new Date().getTime()});
 
                         //If we have hashes, deal with them
                         var shouldBroadcast = handleDirects(cleanChat, chat); 
