@@ -131,9 +131,14 @@ rc.lrange('chatentries', -1000, -1, function(err, data) {
     }
     else if (data) {
         _.each(data, function(jsonChat) {
-            var chat = new models.ChatEntry();
-            chat.mport(jsonChat);
-            nodeChatModel.chats.add(chat);
+            try {
+                var chat = new models.ChatEntry();
+                chat.mport(jsonChat);
+                nodeChatModel.chats.add(chat);
+            }
+            catch(err) {
+                console.log('Failed to revive chat ' + jsonChat + ' with err ' + err);
+            }
         });
 
         console.log('Revived ' + nodeChatModel.chats.length + ' chats');
