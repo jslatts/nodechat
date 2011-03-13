@@ -123,7 +123,7 @@ app.get('/', restrict, function(req, res){
 var activeClients = 0;
 var nodeChatModel = new models.NodeChatModel();
 
-rc.lrange('chatentries', 0, -1, function(err, data) {
+rc.lrange('chatentries', -1000, -1, function(err, data) {
     if (err)
     {
         console.log('Error: ' + err);
@@ -175,8 +175,8 @@ topPoster.lettercount = 0;
 
 function sendInitialDataToClient(client) {
     if (nodeChatModel.chats.length > 100)
-        //var chatHistory = nodeChatModel.chats.rest(nodeChatModel.chats.length-20);
-        var chatHistory = nodeChatModel.chats.first(20);
+        var chatHistory = nodeChatModel.chats.rest(nodeChatModel.chats.length-20);
+        //var chatHistory = nodeChatModel.chats.first(20);
     else 
         var chatHistory = nodeChatModel.chats;
 
