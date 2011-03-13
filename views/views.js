@@ -113,7 +113,7 @@ var NodeChatView = Backbone.View.extend({
 
                 //remove old ones if we are getting too long
                 if (this.model.chats.length > 20)
-                    this.model.chats.remove(this.model.chats.at(20));
+                    this.model.chats.remove(this.model.chats.last());
                 break;
             case 'update':
                 this.clientCountView.model.updateClients(message.clients);
