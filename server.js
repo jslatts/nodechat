@@ -346,6 +346,8 @@ function handleMashTags(cleanChat, chat, user) {
 
     var mashTags = getMashTagsFromString(cleanChat);
     if(mashTags.length > 0) {
+        var alreadyNotifiedUsers = new Array(); //Make sure we only send a multi-tagged chat once
+
         for (var t in mashTags) {
             var foundTag = nodeChatModel.mashTags.find(function(tag){return tag.get('name') == mashTags[t];});
 
@@ -360,6 +362,7 @@ function handleMashTags(cleanChat, chat, user) {
                         nodeChatModel.mashTags.add(foundTag);
                         user.followedMashTags.add(foundTag);
                         foundTag.watchingUsers.add(user);
+                        foundTag.mashes.add(chat);
 
                         //Send the tag back to the user
                         user.get('client').send({
@@ -367,8 +370,7 @@ function handleMashTags(cleanChat, chat, user) {
                             data: foundTag.xport({recurse: false})
                         });
 
-
-                        notifySubscribedMashTagUsers(chat,foundTag);
+                        notifySubscribedMashTagUsers(chat,foundTag, alreadyNotifiedUsers);
                     });
                 };
                 createTag(mashTags[t]);
@@ -388,22 +390,29 @@ function handleMashTags(cleanChat, chat, user) {
                 if(!foundTag.watchingUsers.some(function(u) { return u == user; })) 
                     foundTag.watchingUsers.add(user);
 
+                if(!foundTag.mashes.some(function(m) { return m == chat; })) 
+                    foundTag.mashes.add(chat);
+
                 //Notify all the subscribed users
-                notifySubscribedMashTagUsers(chat,foundTag);
+                notifySubscribedMashTagUsers(chat,foundTag, alreadyNotifiedUsers);
             }
         }
     }
 }
 
 //Send the chat to all currently subscribed users for a mashTag
-function notifySubscribedMashTagUsers(chat, mashTag){
-
+function notifySubscribedMashTagUsers(chat, mashTag, doNotNotifyList){
     mashTag.watchingUsers.forEach(function(user){
+        if (doNotNotifyList[user.get('name')]) return;
+
         console.log('notifying ' + user.get('name') + ' for chat' + chat.xport());
         user.get('client').send({
             event: 'mash',
             data: chat.xport()
         });
+
+        //Add the user to do not call list so they only get one copy
+        doNotNotifyList[user.get('name')] = 1;
     });
 }
 

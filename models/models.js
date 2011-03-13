@@ -52,6 +52,7 @@
     models.MashTagModel = Backbone.Model.extend({
         initialize: function() {
             this.watchingUsers = new models.UserCollection();
+            this.mashes = new models.ChatCollection();
         }
     });
 
