@@ -21,6 +21,18 @@ html(lang="en")
         label You are connect as: 
           = locals.name
 
+      div(style='float:left;width:100%')
+        div(style='width:40%; float:right; overflow:hidden; word-wrap: break-word;')
+          p
+            | Secret Chats Messages (@)
+            #direct_list
+          p
+            | Mashtags
+            div(style='float:left')#mashtag_list
+            div(style='float:left;clear:both')#mashtag_chat_list
+        div(style='width:40%;float:left;')#chat_list
+          p
+            | Fun Chat Messages
       div(style='float:left;width:100%;')
         form(method="post", action="#", onsubmit="return false")#messageForm
           p
@@ -29,14 +41,3 @@ html(lang="en")
             input(type='text', name='message', size='140')
             input(type='submit', value='send')
 
-      div(style='float:left;width:100%')
-        div(style='width:40%; float:right; overflow:hidden; word-wrap: break-word;')
-          p
-            | Secret Chats Messages (@)
-            #direct_list
-          p
-            | Mashtags
-            #mashtag_list
-            br
-            #mashtag_chat_list
-        div(style='width:40%;float:left;')#chat_list

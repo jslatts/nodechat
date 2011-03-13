@@ -3,8 +3,6 @@
 //
 
 $(document).ready(function () {
-    //<%= rediskey %>); 
-    window.app = NodeChatController.init({});
-
+    window.app = NodeChatController.init({port: 8000});
 });
 

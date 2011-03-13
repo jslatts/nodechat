@@ -16,6 +16,7 @@ rc.on('error', function(err) {
 });
 
 redis.debug_mode = false;
+var server_port = 8000;
  
 //configure express 
 app.use(express.bodyParser());
@@ -114,7 +115,7 @@ app.get('/*.(js|css|swf)', function(req, res){
 
 app.get('/', restrict, function(req, res){
     res.render('index', {
-        locals: { name: req.session.user.name }
+    locals: { name: req.session.user.name, port: server_port }
         });
 });
 
@@ -174,7 +175,7 @@ topPoster.count = 0;
 topPoster.lettercount = 0;
 
 function sendInitialDataToClient(client) {
-    if (nodeChatModel.chats.length > 100)
+    if (nodeChatModel.chats.length > 20)
         var chatHistory = nodeChatModel.chats.rest(nodeChatModel.chats.length-20);
         //var chatHistory = nodeChatModel.chats.first(20);
     else 
@@ -183,6 +184,7 @@ function sendInitialDataToClient(client) {
     console.log('sending ' + chatHistory.length);
 
     chatHistory.forEach(function(chat) {
+        console.log('Revived chat datetime is ', chat.get('datetime'));
         client.send({
             event: 'chat',
             data: chat.xport()
@@ -269,7 +271,7 @@ function message(client, socket, msg){
 
                     rc.incr('next.chatentry.id', function(err, newId) {
                         chat.set({id: newId, name: cleanName, time:getClockTime()});
-                        chat.set({datetime: getTime()});
+                        chat.set({datetime: new Date().getTime()});
                         console.log(chat.xport());
 
                         //If we have hashes, deal with them
@@ -283,10 +285,6 @@ function message(client, socket, msg){
             });
         });
     }
-}
-
-function getTime() {
-    return new Date().getTime();
 }
 
 var broadCastChat = function(chat, client) {
@@ -355,21 +353,19 @@ function handleMashTags(cleanChat, chat, client, fn) {
                             event: 'mash',
                             data: foundTag.xport()
                         });
+
                         chat.mashTags.add(foundTag);
-                        fn(chat, client);
                     });
                 };
                 createTag(mashTags[t]);
             } 
             else {
                 chat.mashTags.add(foundTag);
-                fn(chat, client);
             }
         }
     }
-    else {
-        fn(chat, client);
-    }
+
+    fn(chat, client);
 }
 
 function getMashTagsFromString(chatText) {
@@ -434,4 +430,5 @@ function getClockTime()
    return timeString;
 }
 
-app.listen(80);
+app.listen(server_port);
+console.log('listening on port ' + server_port);

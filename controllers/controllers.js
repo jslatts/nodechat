@@ -1,12 +1,9 @@
 //
 //Controllers
 //
-var NodeChatController = {
-    init: function() {
-        //store the key in a cookie
-//        SetCookie('rediskey', this.rediskey); 
-
-        this.socket = new io.Socket(null, {port: 80});
+NodeChatController = {
+    init: function(options) {
+        this.socket = new io.Socket(null, {port: options.port});
 
         var mySocket = this.socket;
 
@@ -16,7 +13,6 @@ var NodeChatController = {
 
 
         this.socket.on('connect', function() {
-            //var rediskey = GetCookie('rediskey'); 
             var rediskey = 'hewo';
             mySocket.send({rediskey: rediskey});
         });

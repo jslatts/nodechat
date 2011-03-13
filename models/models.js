@@ -44,7 +44,7 @@
 
         initialize: function() {
             this.chats = new models.ChatCollection(); 
-//            this.chats.comparator = chatComparator;
+            this.chats.comparator = chatComparator;
 
             this.mashTags = new models.MashTagCollection(); 
             this.users = new models.UserCollection();
@@ -64,7 +64,10 @@
     });
 
     var chatComparator = function(chat) {
-        return chat.get('datetime');
+        var datetime = chat.get('datetime');
+
+        if(datetime) return datetime;
+        else return 0;
     }
 
     models.MashTagCollection = Backbone.Collection.extend({
