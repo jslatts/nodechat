@@ -6,7 +6,7 @@ var NodeChatController = {
         //store the key in a cookie
 //        SetCookie('rediskey', this.rediskey); 
 
-        this.socket = new io.Socket(null, {port: 8000});
+        this.socket = new io.Socket(null, {port: 80});
 
         var mySocket = this.socket;
 
