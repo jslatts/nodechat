@@ -16,7 +16,7 @@ rc.on('error', function(err) {
 });
 
 redis.debug_mode = false;
-var server_port = 80;
+var server_port = 8000;
  
 //configure express 
 app.use(express.bodyParser());
