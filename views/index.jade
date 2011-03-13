@@ -1,15 +1,19 @@
 !!! 5
-html(lang="en")
+html(lang='en')
   head
     title nodechat
-    script(type="text/javascript", src="/lib/jquery-1.5.1.js")
-    script(type="text/javascript", src="/lib/underscore.js")
-    script(type="text/javascript", src="/lib/backbone.js")
-    script(type="text/javascript", src="/socket.io/socket.io.js")
-    script(type="text/javascript", src="/models/models.js")
-    script(type="text/javascript", src="/controllers/controllers.js")
-    script(type="text/javascript", src="/views/views.js")
-    script(type="text/javascript", src="/nodechat.js")
+    script(type='text/javascript', src='/lib/jquery-1.5.1.js')
+    script(type='text/javascript', src='/lib/underscore.js')
+    script(type='text/javascript', src='/lib/backbone.js')
+    script(type='text/javascript', src='/socket.io/socket.io.js')
+    script(type='text/javascript', src='/models/models.js')
+    script(type='text/javascript', src='/controllers/controllers.js')
+    script(type='text/javascript', src='/views/views.js')
+    script
+      | $(document).ready(function () { 
+      |     window.app = NodeChatController.init({port: !{locals.port}}); 
+      |     $('input:text:first:visible').focus();  
+      | });
   body
     div(style='width:100%;float:left;clear:left')#content
       div(style='float:right')#help
@@ -41,10 +45,10 @@ html(lang="en")
           p
             | Fun Chat Messages
         div(style='float:left;width:40%;clear:both;')
-          form(method="post", action="#", onsubmit="return false")#messageForm
+          form(method='post', action='#', onsubmit='return false')#messageForm
             p
               label Message: 
               br
-              input(type='text', name='message', size='140')
+              input(type='text', name='message', size='130')
               input(type='submit', value='send')
 
