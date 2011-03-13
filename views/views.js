@@ -79,7 +79,7 @@ var NodeChatView = Backbone.View.extend({
 
     , addChat: function(chat) {
         var view = new ChatView({model: chat});
-        $('#chat_list').insert(view.render().el);
+        $('#chat_list').prepend(view.render().el);
 
         if (chat.mashTags.length > 0) {
             $('#mashtag_chat_list').append(view.render().el);
