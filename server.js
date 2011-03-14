@@ -591,10 +591,10 @@ path.exists(config_file, function (exists) {
     else {
         console.log('config found. starting in server mode');
         app.listen(server_port);
-        var port = dev_port;
+        var port = server_port;
     }
 
-    console.log('listening on port ' + server_port);
+    console.log('listening on port ' + port);
 
     app.get('/', restrict, function(req, res){
         res.render('index', {
