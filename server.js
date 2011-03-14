@@ -583,6 +583,7 @@ function getClockTime()
 
 //Open a config file (currently empty) to see if we are on a server
 path.exists(config_file, function (exists) {
+    console.log('Attempting to use config at ' config_file);
     if (!exists) {
         console.log('no config found. starting in local dev mode');
         app.listen(dev_port);
