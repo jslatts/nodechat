@@ -70,8 +70,50 @@ var UserView = Backbone.View.extend({
 });
 
 var NodeChatView = Backbone.View.extend({
-    initialize: function(options) {
-        _.bindAll(this, 'addUser', 'removeUser');
+    newMessages: 0
+    , newDirectMessages: 0
+
+    , clearAlerts: function() {
+        this.newMessages = -1;
+        this.newDirectMessages = 0;
+
+        clearInterval(this.directAlert); 
+        clearInterval(this.msgAlert); 
+
+        this.msgAlert = null;
+        this.directAlert = null;
+        document.title = 'nodechat';
+    }
+    , setDirectAlert: function() {
+        console.log('trying to unset');
+        if(!this.directAlert) {
+            clearInterval(this.msgAlert); //@directs trump regular messages
+            this.msgAlert = null;
+            document.title = 'nodechat';
+
+            this.directAlert = setInterval(function() {
+                console.log('set direct alert');
+                if (document.title == 'nodechat')
+                    document.title = 'nodechat @';
+                else
+                    document.title = 'nodechat';
+            }, 2000);
+        }
+    }
+    , setMsgAlert: function() {
+        if(!this.msgAlert) {
+            this.msgAlert = setInterval(function() {
+                console.log('set msg alert');
+                if (document.title == 'nodechat')
+                    document.title = 'nodechat *';
+                else
+                    document.title = 'nodechat';
+            }, 2000);
+        }
+    }
+
+    , initialize: function(options) {
+        _.bindAll(this, 'addUser', 'removeUser', 'addChat', 'addDirect');
         this.model.chats.bind('add', this.addChat);
         this.model.chats.bind('remove', this.removeChat);
         this.model.mashTags.bind('add', this.addMashTag);
@@ -92,6 +134,10 @@ var NodeChatView = Backbone.View.extend({
     , addChat: function(chat) {
         var view = new ChatView({model: chat});
         $('#chat_list').append(view.render().el);
+
+        ++this.newMessages;
+        if(this.newMessages > 0) 
+            this.setMsgAlert();
     }
     , removeChat: function(chat) { chat.view.remove(); }
 
@@ -110,6 +156,11 @@ var NodeChatView = Backbone.View.extend({
     , addDirect: function(direct) {
         var view = new ChatView({model: direct});
         $('#direct_list').append(view.render().el);
+
+        ++this.newDirectMessages;
+        console.log('have directs' + this.newDirectMessages);
+        if(this.newDirectMessages > 0) 
+            this.setDirectAlert();
     }
     , removeDirect: function(direct) { direct.view.remove(); }
 
@@ -197,5 +248,7 @@ var NodeChatView = Backbone.View.extend({
         var chatEntry = new models.ChatEntry({name: nameField.val(), text: inputField.val()});
         this.socket.send(chatEntry.xport());
         inputField.val('');
+
+        this.clearAlerts();
     }
 });
