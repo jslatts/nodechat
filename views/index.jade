@@ -10,10 +10,10 @@ html(lang='en')
     script(type='text/javascript', src='/controllers/controllers.js')
     script(type='text/javascript', src='/views/views.js')
     script
-      | $(document).ready(function () { 
-      |     window.app = NodeChatController.init({port: !{locals.port}}); 
-      |     $('input:text:first:visible').focus();  
-      | });
+      $(document).ready(function () { 
+        window.app = NodeChatController.init({port: !{locals.port}}); 
+         $('input:text:first:visible').focus();  
+      });
   body
     div(style='width:100%;float:left;clear:left')#content
       div(style='float:right')#help
