@@ -12,10 +12,7 @@ NodeChatController = {
         var view = this.view;
 
 
-        this.socket.on('connect', function() {
-            var rediskey = 'hewo';
-            mySocket.send({rediskey: rediskey});
-        });
+        this.socket.on('connect', function() { }); //do stuff
 
         this.socket.on('message', function(msg) {view.msgReceived(msg)});
         this.socket.connect();

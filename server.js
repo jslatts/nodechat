@@ -16,7 +16,7 @@ rc.on('error', function(err) {
 });
 
 redis.debug_mode = false;
-var server_port = 8000;
+var server_port = 80;
  
 //configure express 
 app.use(express.bodyParser());
@@ -121,7 +121,6 @@ app.get('/', restrict, function(req, res){
 
 
 //create local state
-var activeClients = 0;
 var nodeChatModel = new models.NodeChatModel();
 
 rc.lrange('chatentries', -1000, -1, function(err, data) {
@@ -196,6 +195,14 @@ function sendInitialDataToClient(client) {
 
     console.log('sending ' + chatHistory.length);
 
+    nodeChatModel.users.forEach(function(user) {
+        var sUser = new models.User({name:user.get('name')});
+        client.send({
+            event: 'user:add',
+            data: sUser.xport()
+        });
+    });
+
     chatHistory.forEach(function(chat) {
         client.send({
             event: 'chat',
@@ -215,32 +222,64 @@ function getConnectedUser(data, client) {
 
     if(!connectedUser) {
         connectedUser = new models.User({'client': client, 'name': cleanName});
+        connectedUser.clientList = new Array();
+        connectedUser.clientList.push(client);
+
         nodeChatModel.users.add(connectedUser);
         console.log('new user: ' + connectedUser.get('name'));
     
-        activeClients += 1;
-        socket.broadcast({
-            event: 'update',
-            clients: activeClients
+        var sUser = new models.User({name:connectedUser.get('name')});
+        console.log('Connected User ' + sUser.xport({recurse: false}));
+        client.broadcast({
+            event: 'user:add',
+            data: sUser.xport({recurse: false})
         });
 
-        client.on('disconnect', function(){ 
-            clientDisconnect(client, function() {
-                console.log('Removing user from active pool: ' + connectedUser.get('name'));
-                nodeChatModel.users.remove(connectedUser);
-            });
-        });
-    } 
-    else if (connectedUser.get('client') != client){
-        console.log('reassociating');
-        //Looks like the user has a new session for some reason. try and reassociate the model
-        client.removeListener('disconnect');
+        //Count multiple connections in case someone has a window open
+        connectedUser.currentConnections = 1;
 
         //Set disconnect here so we can destroy the user model
         client.on('disconnect', function(){ 
             clientDisconnect(client, function() {
-                console.log('Removing user from active pool: ' + connectedUser.get('name'));
-                nodeChatModel.users.remove(connectedUser);
+                if(connectedUser.currentConnections > 1) {
+                    connectedUser.currentConnections--;
+                }
+                else {
+                    console.log('Removing user from active pool: ' + connectedUser.get('name'));
+                    connectedUser.currentConnections = 0;
+                    var sUser = new models.User({name:connectedUser.get('name')});
+                    socket.broadcast({
+                        event: 'user:remove',
+                        data: sUser.xport({recurse: false})
+                    });
+
+                    nodeChatModel.users.remove(connectedUser);
+                }
+            });
+        });
+    } 
+    //Looks like the user has a new session for some reason. try and deal with this
+    else if (!_.any(connectedUser.clientList, function(c) { return c == client; })) {
+        connectedUser.currentConnections++;
+        connectedUser.clientList.push(client);
+
+        //Set disconnect here so we can destroy the user model
+        client.on('disconnect', function(){ 
+            clientDisconnect(client, function() {
+                if(connectedUser.currentConnections > 1) {
+                    connectedUser.currentConnections--;
+                }
+                else {
+                    console.log('Removing user from active pool: ' + connectedUser.get('name'));
+                    connectedUser.currentConnections = 0;
+                    var sUser = new models.User({name:connectedUser.get('name')});
+                    socket.broadcast({
+                        event: 'user:remove',
+                        data: sUser.xport({recurse: false})
+                    });
+
+                    nodeChatModel.users.remove(connectedUser);
+                }
             });
         });
     }
@@ -307,6 +346,7 @@ function message(client, socket, msg){
 
                         //If we have hashes, deal with them
                         var shouldBroadcast = handleDirects(chat, connectedUser); 
+                        checkForMashTagUnSub(chat, connectedUser); 
                         handleMashTags(chat, connectedUser); 
 
                         if (shouldBroadcast)
@@ -344,17 +384,21 @@ function handleDirects(chat, originalUser) {
             console.log('Located direct targer user' + foundUser.get('name'));
             foundUser.directs.add(chat);
 
-            foundUser.get('client').send({
-                event: 'direct',
-                data: chat.xport()
+            _.each(foundUser.clientList, function(client) { 
+                client.send({
+                    event: 'direct',
+                    data: chat.xport()
+                });
             });
 
             rc.rpush('user:' + foundUser.get('name') + '.directs', chat.xport({recurse: false}), redis.print);
 
             //Send back to the original user
-            originalUser.get('client').send({
-                event: 'direct',
-                data: chat.xport()
+            _.each(originalUser.clientList, function(client) { 
+                client.send({
+                    event: 'direct',
+                    data: chat.xport()
+                });
             });
         }
     }
@@ -383,7 +427,7 @@ function handleMashTags(chat, user) {
         return;
     }
 
-    var mashTags = getMashTagsFromString(chat.get('text'));
+    var mashTags = getChunksFromString(chat.get('text'), '#');
     if(mashTags.length > 0) {
         var alreadyNotifiedUsers = new Array(); //Make sure we only send a multi-tagged chat once
 
@@ -404,9 +448,11 @@ function handleMashTags(chat, user) {
                         foundTag.mashes.add(chat);
 
                         //Send the tag back to the user
-                        user.get('client').send({
-                            event: 'mashtag',
-                            data: foundTag.xport({recurse: false})
+                        _.each(user.clientList, function(client) { 
+                            client.send({
+                                event: 'mashtag',
+                                data: foundTag.xport({recurse: false})
+                            });
                         });
 
                         notifySubscribedMashTagUsers(chat,foundTag, alreadyNotifiedUsers);
@@ -420,9 +466,11 @@ function handleMashTags(chat, user) {
                 {
                     user.followedMashTags.add(foundTag);
 
-                    user.get('client').send({
-                        event: 'mashtag',
-                        data: foundTag.xport({recurse: false})
+                    _.each(user.clientList, function(client) { 
+                        client.send({
+                            event: 'mashtag',
+                            data: foundTag.xport({recurse: false})
+                        });
                     });
                 }
 
@@ -439,15 +487,40 @@ function handleMashTags(chat, user) {
     }
 }
 
+//Look for unsubscription notifications
+function checkForMashTagUnSub(chat, user) {
+    var mashTagsToRemove = getChunksFromString(chat.get('text'), '-');
+    if(mashTagsToRemove.length > 0) {
+        for (var t in mashTagsToRemove) {
+            var foundTag = nodeChatModel.mashTags.find(function(tag){return tag.get('name') == mashTagsToRemove[t];});
+
+            if (foundTag) {
+                user.followedMashTags.remove(foundTag);
+                foundTag.watchingUsers.remove(user);
+
+                //Notify client that tag was unsub'd
+                _.each(user.clientList, function(client) { 
+                    client.send({
+                        event: 'mashtag:delete',
+                        data: foundTag.xport({recurse: false})
+                    });
+                });
+            }
+        }
+    }
+}
+
 //Send the chat to all currently subscribed users for a mashTag
 function notifySubscribedMashTagUsers(chat, mashTag, doNotNotifyList){
     mashTag.watchingUsers.forEach(function(user){
         if (doNotNotifyList[user.get('name')]) return;
 
         console.log('notifying ' + user.get('name') + ' for chat' + chat.xport());
-        user.get('client').send({
-            event: 'mash',
-            data: chat.xport()
+        _.each(user.clientList, function(client) { 
+            client.send({
+                event: 'mash',
+                data: chat.xport()
+            });
         });
 
         //Add the user to do not call list so they only get one copy
@@ -455,35 +528,32 @@ function notifySubscribedMashTagUsers(chat, mashTag, doNotNotifyList){
     });
 }
 
-function getMashTagsFromString(chatText) {
-    var mashTagIndex = chatText.indexOf('#');
-    var mashTags = new Array();
+//Returns chunks with the delimiter _stripped_
+function getChunksFromString(chatText, delimiter) {
+    var chunkIndex = chatText.indexOf(delimiter);
+    var chunks = new Array();
     var startPos = 0;
 
-    while(startPos <= chatText.length && mashTagIndex > -1) {
+    while(startPos <= chatText.length && chunkIndex > -1) {
 
         //Grab the tag and push it on the array
-        var endPos = chatText.indexOf(' ', mashTagIndex+1);
-        mashTags.push(chatText.substring(mashTagIndex, endPos));
+        var endPos = chatText.indexOf(' ', chunkIndex+1);
+        chunks.push(chatText.substring(chunkIndex+1, endPos).toLowerCase());
         
         //Setup for the next one
         startPos = endPos +1;
-        mashTagIndex = chatText.indexOf('#', startPos);
+        chunkIndex = chatText.indexOf(delimiter, startPos);
     }
     
-    console.log('Found mashtags: ' + mashTags);
+    if(chunks.length > 0)
+        console.log('Found chunks: ' + chunks + ' for delimiter: ' + delimiter);
 
-    return mashTags;
+    return chunks;
 }
 
 //Handle client disconnect decrementing the count then running the continuation
 function clientDisconnect(client, next) {
-    activeClients -= 1;
-    console.log('broadcasting activeClients ' + activeClients, ' client ref is ' + client.sessionId);
-    client.broadcast({
-        event: 'update',
-        clients: activeClients
-    });
+    console.log('Client disconnecting: ' + client.sessionId);
 
     next();
 }

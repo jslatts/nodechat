@@ -24,16 +24,6 @@
         }
     });
 
-    models.ClientCountModel = Backbone.Model.extend({
-        defaults: {
-            "clients": 0
-        },
-
-        updateClients: function(clients){
-            this.set({clients: clients});
-        }
-    });
-
     models.NodeChatModel = Backbone.Model.extend({
         initialize: function() {
             this.chats = new models.ChatCollection(); 
