@@ -85,14 +85,14 @@ var NodeChatView = Backbone.View.extend({
         document.title = 'nodechat';
     }
     , setDirectAlert: function() {
-        console.log('trying to unset');
+        log('trying to unset');
         if(!this.directAlert) {
             clearInterval(this.msgAlert); //@directs trump regular messages
             this.msgAlert = null;
             document.title = 'nodechat';
 
             this.directAlert = setInterval(function() {
-                console.log('set direct alert');
+                log('set direct alert');
                 if (document.title == 'nodechat')
                     document.title = 'nodechat @';
                 else
@@ -103,7 +103,7 @@ var NodeChatView = Backbone.View.extend({
     , setMsgAlert: function() {
         if(!this.msgAlert) {
             this.msgAlert = setInterval(function() {
-                console.log('set msg alert');
+                log('set msg alert');
                 if (document.title == 'nodechat')
                     document.title = 'nodechat *';
                 else
@@ -160,7 +160,7 @@ var NodeChatView = Backbone.View.extend({
         $('#direct_list').append(view.render().el);
 
         ++this.newDirectMessages;
-        console.log('have directs' + this.newDirectMessages);
+        log('have directs' + this.newDirectMessages);
         if(this.newDirectMessages > 0) 
             this.setDirectAlert();
     }
@@ -182,7 +182,7 @@ var NodeChatView = Backbone.View.extend({
                 this.model.mport(message.data);
                 break;
             case 'chat':
-                console.log('chat received: ' + message.data );
+                log('chat received: ' + message.data );
                 var newChatEntry = new models.ChatEntry();
                 newChatEntry.mport(message.data);
                 this.model.chats.add(newChatEntry);
@@ -192,7 +192,7 @@ var NodeChatView = Backbone.View.extend({
                     this.model.chats.remove(this.model.chats.first());
                 break;
             case 'mash':
-                console.log('mash received: ' + message.data );
+                log('mash received: ' + message.data );
                 var mashEntry = new models.ChatEntry();
                 mashEntry.mport(message.data);
                 this.model.mashes.add(mashEntry);
@@ -202,7 +202,7 @@ var NodeChatView = Backbone.View.extend({
                     this.model.mashes.remove(this.model.mashes.first());
                 break;
             case 'user:add':
-                console.log('user add received: ' + message.data );
+                log('user add received: ' + message.data );
                 var user = new models.User();
                 user.mport(message.data);
 
@@ -211,7 +211,7 @@ var NodeChatView = Backbone.View.extend({
                     this.model.users.add(user);
                 break;
             case 'user:remove':
-                console.log('user delete received: ' + message.data );
+                log('user delete received: ' + message.data );
                 var sUser = new models.User();
                 sUser.mport(message.data);
 
@@ -220,19 +220,19 @@ var NodeChatView = Backbone.View.extend({
                 this.model.users.remove(users);
                 break;
             case 'mashtag':
-                console.log('mash received: ' + message.data );
+                log('mash received: ' + message.data );
                 var newMashTag = new models.MashTagModel();
                 newMashTag.mport(message.data);
                 this.model.mashTags.add(newMashTag);
                 break;
             case 'mashtag:delete':
-                console.log('mash:delete received for id: ' + message.data );
+                log('mash:delete received for id: ' + message.data );
                 var mashTagToDelete  = new models.MashTagModel();
                 mashTagToDelete.mport(message.data);
                 this.model.mashTags.remove(mashTagToDelete);
                 break;
             case 'direct':
-                console.log('direct received: ' + message.data );
+                log('direct received: ' + message.data );
                 var newDirect = new models.ChatEntry();
                 newDirect.mport(message.data);
                 this.model.directs.add(newDirect);

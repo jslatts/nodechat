@@ -10,9 +10,18 @@ html(lang='en')
     script(type='text/javascript', src='/controllers/controllers.js')
     script(type='text/javascript', src='/views/views.js')
     script
+      //Fake out FF and IE8
+      function log() {
+          if (typeof console == 'undefined') {
+              return;
+          }
+          console.log.apply(console, arguments);
+      }
+
       $(document).ready(function () { 
         window.app = NodeChatController.init({port: !{locals.port}}); 
-         $('input:text:first:visible').focus();  
+        $('input:text:first:visible').focus();  
+        
       });
   body
     div(style='width:100%;float:left;clear:left')#content
