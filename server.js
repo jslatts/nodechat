@@ -307,6 +307,7 @@ function message(client, socket, msg){
 
                         //If we have hashes, deal with them
                         var shouldBroadcast = handleDirects(chat, connectedUser); 
+                        checkForMashTagUnSub(chat, connectedUser); 
                         handleMashTags(chat, connectedUser); 
 
                         if (shouldBroadcast)
@@ -383,7 +384,7 @@ function handleMashTags(chat, user) {
         return;
     }
 
-    var mashTags = getMashTagsFromString(chat.get('text'));
+    var mashTags = getChunksFromString(chat.get('text'), '#');
     if(mashTags.length > 0) {
         var alreadyNotifiedUsers = new Array(); //Make sure we only send a multi-tagged chat once
 
@@ -439,6 +440,27 @@ function handleMashTags(chat, user) {
     }
 }
 
+//Look for unsubscription notifications
+function checkForMashTagUnSub(chat, user) {
+    var mashTagsToRemove = getChunksFromString(chat.get('text'), '-');
+    if(mashTagsToRemove.length > 0) {
+        for (var t in mashTagsToRemove) {
+            var foundTag = nodeChatModel.mashTags.find(function(tag){return tag.get('name') == mashTagsToRemove[t];});
+
+            if (foundTag) {
+                user.followedMashTags.remove(foundTag);
+                foundTag.watchingUsers.remove(user);
+
+                //Notify client that tag was unsub'd
+                user.get('client').send({
+                    event: 'mashtag:delete',
+                    data: foundTag.xport({recurse: false})
+                });
+            }
+        }
+    }
+}
+
 //Send the chat to all currently subscribed users for a mashTag
 function notifySubscribedMashTagUsers(chat, mashTag, doNotNotifyList){
     mashTag.watchingUsers.forEach(function(user){
@@ -455,25 +477,27 @@ function notifySubscribedMashTagUsers(chat, mashTag, doNotNotifyList){
     });
 }
 
-function getMashTagsFromString(chatText) {
-    var mashTagIndex = chatText.indexOf('#');
-    var mashTags = new Array();
+//Returns chunks with the delimiter _stripped_
+function getChunksFromString(chatText, delimiter) {
+    var chunkIndex = chatText.indexOf(delimiter);
+    var chunks = new Array();
     var startPos = 0;
 
-    while(startPos <= chatText.length && mashTagIndex > -1) {
+    while(startPos <= chatText.length && chunkIndex > -1) {
 
         //Grab the tag and push it on the array
-        var endPos = chatText.indexOf(' ', mashTagIndex+1);
-        mashTags.push(chatText.substring(mashTagIndex, endPos));
+        var endPos = chatText.indexOf(' ', chunkIndex+1);
+        chunks.push(chatText.substring(chunkIndex+1, endPos).toLowerCase());
         
         //Setup for the next one
         startPos = endPos +1;
-        mashTagIndex = chatText.indexOf('#', startPos);
+        chunkIndex = chatText.indexOf(delimiter, startPos);
     }
     
-    console.log('Found mashtags: ' + mashTags);
+    if(chunks.length > 0)
+        console.log('Found chunks: ' + chunks + ' for delimiter: ' + delimiter);
 
-    return mashTags;
+    return chunks;
 }
 
 //Handle client disconnect decrementing the count then running the continuation

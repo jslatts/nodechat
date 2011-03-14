@@ -157,15 +157,15 @@ var NodeChatView = Backbone.View.extend({
                 break;
             case 'mashtag':
                 console.log('mash received: ' + message.data );
-                var newMash  = new models.MashTagModel();
-                newMash.mport(message.data);
-                this.model.mashTags.add(newMash);
+                var newMashTag = new models.MashTagModel();
+                newMashTag.mport(message.data);
+                this.model.mashTags.add(newMashTag);
                 break;
             case 'mashtag:delete':
                 console.log('mash:delete received for id: ' + message.data );
-                var mashToDelete = this.model.mashTags.get(message.data);
-                if(mashToDelete)
-                    this.model.mashTags.remove(mashToDelete);
+                var mashTagToDelete  = new models.MashTagModel();
+                mashTagToDelete.mport(message.data);
+                this.model.mashTags.remove(mashTagToDelete);
                 break;
             case 'direct':
                 console.log('direct received: ' + message.data );
