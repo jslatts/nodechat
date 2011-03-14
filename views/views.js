@@ -74,7 +74,7 @@ var NodeChatView = Backbone.View.extend({
     , newDirectMessages: 0
 
     , clearAlerts: function() {
-        this.newMessages = -1;
+        this.newMessages = 0;
         this.newDirectMessages = 0;
 
         clearInterval(this.directAlert); 
@@ -125,6 +125,8 @@ var NodeChatView = Backbone.View.extend({
         this.model.users.bind('add', this.addUser);
         this.model.users.bind('remove', this.removeUser);
         this.socket = options.socket;
+        that = this;
+        $('#messageBox').focusin(function() { that.clearAlerts(0); }); //Clear the alerts when the box gets focus
     }
 
     , events: {
@@ -248,7 +250,5 @@ var NodeChatView = Backbone.View.extend({
         var chatEntry = new models.ChatEntry({name: nameField.val(), text: inputField.val()});
         this.socket.send(chatEntry.xport());
         inputField.val('');
-
-        this.clearAlerts();
     }
 });

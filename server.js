@@ -116,11 +116,6 @@ app.get('/*.(js|css|swf)', function(req, res){
     res.sendfile('./'+req.url);
 });
 
-app.get('/', restrict, function(req, res){
-    res.render('index', {
-    locals: { name: req.session.user.name, port: server_port }
-        });
-});
 
 
 //create local state
@@ -591,12 +586,20 @@ path.exists(config_file, function (exists) {
     if (!exists) {
         console.log('no config found. starting in local dev mode');
         app.listen(dev_port);
-        console.log('listening on port ' + dev_port);
+        var port = dev_port;
     }
     else {
         console.log('config found. starting in server mode');
         app.listen(server_port);
-        console.log('listening on port ' + server_port);
+        var port = dev_port;
     }
+
+    console.log('listening on port ' + server_port);
+
+    app.get('/', restrict, function(req, res){
+        res.render('index', {
+            locals: { name: req.session.user.name, port: port }
+        });
+    });
 });
 
