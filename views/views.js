@@ -2,23 +2,18 @@
 //Views
 //
 var ChatView = Backbone.View.extend({
-    tagName: 'div',
-
     initialize: function(options) {
         _.bindAll(this, 'render');
         this.model.bind('all', this.render);
         this.model.view = this;
     }
-
     , render: function() {
-        $(this.el).text(this.model.get("time") + " - " + this.model.get("name") + ": " + this.model.get("text"));
+        $(this.el).text(this.model.get('time') + ' - ' + this.model.get('name') + ': ' + this.model.get('text'));
         return this;
     }
-
     , remove: function() {
         $(this.el).remove();
     }
-
 });
 
 var MashView = Backbone.View.extend({
@@ -31,51 +26,52 @@ var MashView = Backbone.View.extend({
     }
 
     , render: function() {
-        $(this.el).text(this.model.get("time") + " - " + this.model.get("name") + ": " + this.model.get("text"));
+        $(this.el).text(this.model.get('time') + ' - ' + this.model.get('name') + ': ' + this.model.get('text'));
         return this;
     }
 
     , remove: function() {
         $(this.el).remove();
     }
-
 });
 
 var MashTagView = Backbone.View.extend({
-    tagName: 'div',
-
     initialize: function(options) {
         _.bindAll(this, 'render');
         this.model.bind('all', this.render);
         this.model.view = this;
     },
-
     render: function() {
-        $(this.el).html(this.model.get("name"));
+        $(this.el).html(this.model.get('name'));
         $(this.el).css('float', 'left');
         $(this.el).css('margin-right', '5px');
         return this;
     }
-
     , remove: function() {
         $(this.el).remove();
     }
 });
 
-var ClientCountView = Backbone.View.extend({
+var UserView = Backbone.View.extend({
     initialize: function(options) {
         _.bindAll(this, 'render');
         this.model.bind('all', this.render);
-    },
-
-    render: function() {
-        this.el.html(this.model.get("clients"));
+        this.model.view = this;
+    }
+    , render: function() {
+        $(this.el).html(this.model.get('name'));
+        $(this.el).css('float', 'left');
+        $(this.el).css('margin-right', '5px');
         return this;
+    }
+    , remove: function() {
+        $(this.el).remove();
     }
 });
 
 var NodeChatView = Backbone.View.extend({
     initialize: function(options) {
+        _.bindAll(this, 'addUser', 'removeUser');
         this.model.chats.bind('add', this.addChat);
         this.model.chats.bind('remove', this.removeChat);
         this.model.mashTags.bind('add', this.addMashTag);
@@ -84,49 +80,49 @@ var NodeChatView = Backbone.View.extend({
         this.model.mashes.bind('remove', this.removeMash);
         this.model.directs.bind('add', this.addDirect);
         this.model.directs.bind('remove', this.removeDirect);
+        this.model.users.bind('add', this.addUser);
+        this.model.users.bind('remove', this.removeUser);
         this.socket = options.socket;
-        this.clientCountView = new ClientCountView({model: new models.ClientCountModel(), el: $('#client_count')});
     }
 
     , events: {
-        "submit #messageForm" : "sendMessage"
+        'submit #messageForm' : 'sendMessage'
     }
 
     , addChat: function(chat) {
         var view = new ChatView({model: chat});
         $('#chat_list').append(view.render().el);
     }
-
-    , removeChat: function(chat) {
-        chat.view.remove();
-    }
+    , removeChat: function(chat) { chat.view.remove(); }
 
     , addMash: function(mash) {
         var view = new MashView({model: mash});
         $('#mashtag_chat_list').append(view.render().el);
     }
-
-    , removeMash: function(mash) {
-        mash.view.remove();
-    }
+    , removeMash: function(mash) { mash.view.remove(); }
 
     , addMashTag: function(mashTag) {
         var view = new MashTagView({model: mashTag});
         $('#mashtag_list').append(view.render().el);
     }
-
-    , removeMashTag: function(mashTag) {
-        mashTag.view.remove();
-    }
+    , removeMashTag: function(mashTag) { mashTag.view.remove(); }
 
     , addDirect: function(direct) {
         var view = new ChatView({model: direct});
         $('#direct_list').append(view.render().el);
     }
+    , removeDirect: function(direct) { direct.view.remove(); }
 
-    , removeDirect: function(direct) {
-        direct.view.remove();
+    , addUser: function(user) {
+        var view = new UserView({model: user});
+        $('#user_list').append(view.render().el);
+        $('#user_count').html(this.model.users.length + ' ');
     }
+    , removeUser: function(user) { 
+        user.view.remove();
+        $('#user_count').html(this.model.users.length + ' ');
+    }
+
     , msgReceived: function(message){
         switch(message.event) {
             case 'initial':
@@ -152,8 +148,23 @@ var NodeChatView = Backbone.View.extend({
                 if (this.model.mashes.length > 6)
                     this.model.mashes.remove(this.model.mashes.first());
                 break;
-            case 'update':
-                this.clientCountView.model.updateClients(message.clients);
+            case 'user:add':
+                console.log('user add received: ' + message.data );
+                var user = new models.User();
+                user.mport(message.data);
+
+                //In case of refresh/socket/whatever bugs, only add a user once
+                if(!this.model.users.some(function(u) { return u.get('name') == user.get('name'); }))
+                    this.model.users.add(user);
+                break;
+            case 'user:remove':
+                console.log('user delete received: ' + message.data );
+                var sUser = new models.User();
+                sUser.mport(message.data);
+
+                //Because we don't have the actual model, find anything with the same name and remove it
+                var users = this.model.users.filter(function(u) { return u.get('name') == sUser.get('name'); });
+                this.model.users.remove(users);
                 break;
             case 'mashtag':
                 console.log('mash received: ' + message.data );

@@ -25,11 +25,12 @@ html(lang='en')
           br
           a(href='/logout') logout
       h1(style='margin-top:0px') nodechat
-      p 
-        | connected clients
-        span#client_count 0
-      p
-        label You are connect as: 
+      div(style='float:left')
+        span#user_count 0
+        | users online: 
+      div(style='float:left;margin-left:10px;')#user_list
+      p(style='float:left;clear:left;')
+        label You are connected as: 
           = locals.name
 
       div(style='float:left;width:100%')
