@@ -73,8 +73,8 @@ var NodeChatView = Backbone.View.extend({
     newMessages: 0
     , newDirectMessages: 0
 
-    , clearAlerts: function() {
-        this.newMessages = 0;
+    , clearAlerts: function(count) {
+        this.newMessages = count;
         this.newDirectMessages = 0;
 
         clearInterval(this.directAlert); 
@@ -250,5 +250,6 @@ var NodeChatView = Backbone.View.extend({
         var chatEntry = new models.ChatEntry({name: nameField.val(), text: inputField.val()});
         this.socket.send(chatEntry.xport());
         inputField.val('');
+        this.clearAlerts(-1);
     }
 });
