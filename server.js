@@ -303,8 +303,8 @@ function message(client, socket, msg){
             }
 
             var cleanChat = chat.get('text') + ' ';
-            if (cleanChat)
-                cleanChat = cleanChat.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+//            if (cleanChat)
+ //               cleanChat = cleanChat.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
             var userName = connectedUser.get('name');
             chat.set({'name': userName, 'text': cleanChat});
