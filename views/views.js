@@ -70,8 +70,50 @@ var UserView = Backbone.View.extend({
 });
 
 var NodeChatView = Backbone.View.extend({
-    initialize: function(options) {
-        _.bindAll(this, 'addUser', 'removeUser');
+    newMessages: 0
+    , newDirectMessages: 0
+
+    , clearAlerts: function(count) {
+        this.newMessages = count;
+        this.newDirectMessages = 0;
+
+        clearInterval(this.directAlert); 
+        clearInterval(this.msgAlert); 
+
+        this.msgAlert = null;
+        this.directAlert = null;
+        document.title = 'nodechat';
+    }
+    , setDirectAlert: function() {
+        log('trying to unset');
+        if(!this.directAlert) {
+            clearInterval(this.msgAlert); //@directs trump regular messages
+            this.msgAlert = null;
+            document.title = 'nodechat';
+
+            this.directAlert = setInterval(function() {
+                log('set direct alert');
+                if (document.title == 'nodechat')
+                    document.title = 'nodechat @';
+                else
+                    document.title = 'nodechat';
+            }, 2000);
+        }
+    }
+    , setMsgAlert: function() {
+        if(!this.msgAlert) {
+            this.msgAlert = setInterval(function() {
+                log('set msg alert');
+                if (document.title == 'nodechat')
+                    document.title = 'nodechat *';
+                else
+                    document.title = 'nodechat';
+            }, 2000);
+        }
+    }
+
+    , initialize: function(options) {
+        _.bindAll(this, 'addUser', 'removeUser', 'addChat', 'addDirect');
         this.model.chats.bind('add', this.addChat);
         this.model.chats.bind('remove', this.removeChat);
         this.model.mashTags.bind('add', this.addMashTag);
@@ -83,6 +125,8 @@ var NodeChatView = Backbone.View.extend({
         this.model.users.bind('add', this.addUser);
         this.model.users.bind('remove', this.removeUser);
         this.socket = options.socket;
+        that = this;
+        $('#messageBox').focusin(function() { that.clearAlerts(0); }); //Clear the alerts when the box gets focus
     }
 
     , events: {
@@ -92,6 +136,10 @@ var NodeChatView = Backbone.View.extend({
     , addChat: function(chat) {
         var view = new ChatView({model: chat});
         $('#chat_list').append(view.render().el);
+
+        ++this.newMessages;
+        if(this.newMessages > 0) 
+            this.setMsgAlert();
     }
     , removeChat: function(chat) { chat.view.remove(); }
 
@@ -110,6 +158,11 @@ var NodeChatView = Backbone.View.extend({
     , addDirect: function(direct) {
         var view = new ChatView({model: direct});
         $('#direct_list').append(view.render().el);
+
+        ++this.newDirectMessages;
+        log('have directs' + this.newDirectMessages);
+        if(this.newDirectMessages > 0) 
+            this.setDirectAlert();
     }
     , removeDirect: function(direct) { direct.view.remove(); }
 
@@ -129,7 +182,7 @@ var NodeChatView = Backbone.View.extend({
                 this.model.mport(message.data);
                 break;
             case 'chat':
-                console.log('chat received: ' + message.data );
+                log('chat received: ' + message.data );
                 var newChatEntry = new models.ChatEntry();
                 newChatEntry.mport(message.data);
                 this.model.chats.add(newChatEntry);
@@ -139,7 +192,7 @@ var NodeChatView = Backbone.View.extend({
                     this.model.chats.remove(this.model.chats.first());
                 break;
             case 'mash':
-                console.log('mash received: ' + message.data );
+                log('mash received: ' + message.data );
                 var mashEntry = new models.ChatEntry();
                 mashEntry.mport(message.data);
                 this.model.mashes.add(mashEntry);
@@ -149,7 +202,7 @@ var NodeChatView = Backbone.View.extend({
                     this.model.mashes.remove(this.model.mashes.first());
                 break;
             case 'user:add':
-                console.log('user add received: ' + message.data );
+                log('user add received: ' + message.data );
                 var user = new models.User();
                 user.mport(message.data);
 
@@ -158,7 +211,7 @@ var NodeChatView = Backbone.View.extend({
                     this.model.users.add(user);
                 break;
             case 'user:remove':
-                console.log('user delete received: ' + message.data );
+                log('user delete received: ' + message.data );
                 var sUser = new models.User();
                 sUser.mport(message.data);
 
@@ -167,19 +220,19 @@ var NodeChatView = Backbone.View.extend({
                 this.model.users.remove(users);
                 break;
             case 'mashtag':
-                console.log('mash received: ' + message.data );
+                log('mash received: ' + message.data );
                 var newMashTag = new models.MashTagModel();
                 newMashTag.mport(message.data);
                 this.model.mashTags.add(newMashTag);
                 break;
             case 'mashtag:delete':
-                console.log('mash:delete received for id: ' + message.data );
+                log('mash:delete received for id: ' + message.data );
                 var mashTagToDelete  = new models.MashTagModel();
                 mashTagToDelete.mport(message.data);
                 this.model.mashTags.remove(mashTagToDelete);
                 break;
             case 'direct':
-                console.log('direct received: ' + message.data );
+                log('direct received: ' + message.data );
                 var newDirect = new models.ChatEntry();
                 newDirect.mport(message.data);
                 this.model.directs.add(newDirect);
@@ -197,5 +250,6 @@ var NodeChatView = Backbone.View.extend({
         var chatEntry = new models.ChatEntry({name: nameField.val(), text: inputField.val()});
         this.socket.send(chatEntry.xport());
         inputField.val('');
+        this.clearAlerts(-1);
     }
 });

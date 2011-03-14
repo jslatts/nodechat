@@ -5,7 +5,8 @@ var express = require('express')
     , socket = require('socket.io').listen(app)
     , _ = require('underscore')._
     , Backbone = require('backbone')
-    , models = require('./models/models');
+    , models = require('./models/models')
+    , path = require('path');
 
 var redis = require('redis')
     , rc = redis.createClient()
@@ -16,7 +17,9 @@ rc.on('error', function(err) {
 });
 
 redis.debug_mode = false;
+var dev_port = 8000;
 var server_port = 80;
+var config_file = '/home/node/nodechat_config';
  
 //configure express 
 app.use(express.bodyParser());
@@ -113,11 +116,6 @@ app.get('/*.(js|css|swf)', function(req, res){
     res.sendfile('./'+req.url);
 });
 
-app.get('/', restrict, function(req, res){
-    res.render('index', {
-    locals: { name: req.session.user.name, port: server_port }
-        });
-});
 
 
 //create local state
@@ -303,8 +301,8 @@ function message(client, socket, msg){
             }
 
             var cleanChat = chat.get('text') + ' ';
-            if (cleanChat)
-                cleanChat = cleanChat.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+//            if (cleanChat)
+ //               cleanChat = cleanChat.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
             var userName = connectedUser.get('name');
             chat.set({'name': userName, 'text': cleanChat});
@@ -583,5 +581,26 @@ function getClockTime()
    return timeString;
 }
 
-app.listen(server_port);
-console.log('listening on port ' + server_port);
+//Open a config file (currently empty) to see if we are on a server
+path.exists(config_file, function (exists) {
+    console.log('Attempting to use config at ' + config_file);
+    if (!exists) {
+        console.log('no config found. starting in local dev mode');
+        app.listen(dev_port);
+        var port = dev_port;
+    }
+    else {
+        console.log('config found. starting in server mode');
+        app.listen(server_port);
+        var port = server_port;
+    }
+
+    console.log('listening on port ' + port);
+
+    app.get('/', restrict, function(req, res){
+        res.render('index', {
+            locals: { name: req.session.user.name, port: port }
+        });
+    });
+});
+
