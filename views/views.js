@@ -1,6 +1,25 @@
 //
 //Views
 //
+function replaceURLWithHTMLLinks(text) {
+    var regex = /\b((?:[a-z][\w-]+:(?:\/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}\/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))/i;
+
+    return text.replace(regex,"<a href='$1' target='_blank'>$1</a>");
+}
+
+function replaceURLWithMarkDown(text) {
+    var regex_2asterisk = /\*{2}([a-z0-9%]+)\*{2}/ig;
+    var regex_2underscore = /\_{2}([a-z0-9%]+)\_{2}/ig;
+    var regex_asterisk = /\*([a-z0-9%]+)\*/ig;
+    var regex_underscore = /\_([a-z0-9%]+)\_/ig;
+
+    var returntext = text.replace(regex_2asterisk,"<strong>$1</strong>")
+    returntext = returntext.replace(regex_2underscore,"<strong>$1</strong>")
+    returntext = returntext.replace(regex_asterisk,"<strong>$1</strong>")
+    returntext = returntext.replace(regex_underscore,"<strong>$1</strong>")
+    return returntext;
+}
+
 var ChatView = Backbone.View.extend({
     initialize: function(options) {
         _.bindAll(this, 'render');
@@ -8,7 +27,9 @@ var ChatView = Backbone.View.extend({
         this.model.view = this;
     }
     , render: function() {
-        $(this.el).text(this.model.get('time') + ' - ' + this.model.get('name') + ': ' + this.model.get('text'));
+        var text = replaceURLWithHTMLLinks(this.model.get('text'));
+        text = replaceURLWithMarkDown(text);
+        $(this.el).html(this.model.get('time') + ' - ' + this.model.get('name') + ': ' + text);
         return this;
     }
     , remove: function() {
