@@ -298,6 +298,7 @@ function message(client, socket, msg){
 
             if(!connectedUser) {
                 console.log('Failed to connect user on message');
+                return;
             }
 
             var cleanChat = chat.get('text') + ' ';
