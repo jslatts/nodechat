@@ -15,8 +15,8 @@ function replaceURLWithMarkDown(text) {
 
     var returntext = text.replace(regex_2asterisk,"<strong>$1</strong>")
     returntext = returntext.replace(regex_2underscore,"<strong>$1</strong>")
-    returntext = returntext.replace(regex_asterisk,"<strong>$1</strong>")
-    returntext = returntext.replace(regex_underscore,"<strong>$1</strong>")
+    returntext = returntext.replace(regex_asterisk,"<em>$1</em>")
+    returntext = returntext.replace(regex_underscore,"<em>$1</em>")
     return returntext;
 }
 
