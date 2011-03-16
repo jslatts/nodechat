@@ -106,6 +106,8 @@ app.post('/login', function(req, res){
         // Store the user's primary key 
         // in the session store to be retrieved,
         // or in this case the entire user object
+        console.log('regenerated session id ' + req.session.id);
+        req.session.cookie.httpOnly = false;
         req.session.user = user;
         res.redirect('/');
       });
@@ -162,8 +164,9 @@ socket.on('connection', function(client){
     // helper function that goes inside your socket connection
     client.connectSession = function(fn) {
         if (!client.request || !client.request.headers || !client.request.headers.cookie) {
-            console.log('Missing information on connect');
-            disconnectAndRedirectClient(client,fn('Null request/header/cookie!'));
+            disconnectAndRedirectClient(client,function() {
+               console.log('Null request/header/cookie!');
+            });
             return;
         }
 
@@ -198,7 +201,7 @@ socket.on('connection', function(client){
         }
         else 
             console.log("Failed to connect user");
-        });
+    });
 });
 
 var topPoster = {};
@@ -231,9 +234,7 @@ function sendInitialDataToClient(client) {
 }
 
 function getConnectedUser(data, client) {
-    if(!data) return;
-    if(!data.user) return;
-    if(!data.user.name) return;
+    if(!data || !data.user || !data.user.name) return;
 
     cleanName = data.user.name.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
