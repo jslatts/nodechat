@@ -149,9 +149,11 @@ rc.lrange('chatentries', -1000, -1, function(err, data) {
 socket.on('connection', function(client){
     // helper function that goes inside your socket connection
     client.connectSession = function(fn) {
-        if (!client.request) return;
-        if (!client.request.headers) return;
-        if (!client.request.headers.cookie) return;
+        if (!client.request || !client.request.headers || !client.request.headers.cookie) {
+            console.log('Missing information on connect');
+            fn('Null request/header/cookie!');
+            return;
+        }
 
         var match = client.request.headers.cookie.match(/connect\.sid=([^;]+)/);
         if (!match || match.length < 2) return;

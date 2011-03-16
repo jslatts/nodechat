@@ -47,7 +47,7 @@ var MashView = Backbone.View.extend({
     }
 
     , render: function() {
-        $(this.el).text(this.model.get('time') + ' - ' + this.model.get('name') + ': ' + this.model.get('text'));
+        $(this.el).html(this.model.get('time') + ' - ' + this.model.get('name') + ': ' + this.model.get('text'));
         return this;
     }
 
@@ -95,6 +95,7 @@ var NodeChatView = Backbone.View.extend({
     , newDirectMessages: 0
 
     , clearAlerts: function(count) {
+        document.title = 'nodechat';
         this.newMessages = count;
         this.newDirectMessages = 0;
 
