@@ -206,4 +206,11 @@ var NodeChatView = Backbone.View.extend({
         inputField.val('');
         this.clearAlerts(-1);
     }
+
+    , setConnected: function(connected) {
+        if(connected)
+            $('#disconnectMessage').hide();
+        else
+            $('#disconnectMessage').show();
+    }
 });

@@ -34,7 +34,10 @@ html(lang='en')
           br
           a(href='/logout') logout
       h1(style='margin-top:0px') nodechat
-      div(style='float:left')
+      div(style='margin-top:0px;color:red;display:none;')#disconnectMessage 
+        | disconnected - trying to reconnect...
+
+      div(style='float:left;')
         span#user_count 0
         | users online: 
       div(style='float:left;margin-left:10px;')#user_list
