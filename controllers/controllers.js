@@ -16,6 +16,7 @@ NodeChatController = {
         this.socket.on('connect', function() { 
             log('Connected! Oh hai!');
             this.connected = true;
+            view.setConnected(true);
         }); 
 
         nodeChatController = this;
@@ -25,12 +26,13 @@ NodeChatController = {
         this.socket.on('disconnect', function(){
             log('Disconnected from nodechat. Oh noes!');
             connected = false;
+            view.setConnected(false);
             trying = setTimeout(tryconnect,500);
         });
 
         function tryconnect(){
-            log('Trying to reconnect...');
             if(!connected) {
+                log('Trying to reconnect...');
                 mySocket.connect();
                 clearTimeout(trying);
                 trying = setTimeout(tryconnect,30000);
