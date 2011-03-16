@@ -1,6 +1,25 @@
 //
 //Views
 //
+function replaceURLWithHTMLLinks(text) {
+    var regex = /\b((?:[a-z][\w-]+:(?:\/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}\/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))/i;
+
+    return text.replace(regex,"<a href='$1' target='_blank'>$1</a>");
+}
+
+function replaceURLWithMarkDown(text) {
+    var regex_2asterisk = /\*{2}([a-z0-9%]+)\*{2}/ig;
+    var regex_2underscore = /\_{2}([a-z0-9%]+)\_{2}/ig;
+    var regex_asterisk = /\*([a-z0-9%]+)\*/ig;
+    var regex_underscore = /\_([a-z0-9%]+)\_/ig;
+
+    var returntext = text.replace(regex_2asterisk,"<strong>$1</strong>")
+    returntext = returntext.replace(regex_2underscore,"<strong>$1</strong>")
+    returntext = returntext.replace(regex_asterisk,"<em>$1</em>")
+    returntext = returntext.replace(regex_underscore,"<em>$1</em>")
+    return returntext;
+}
+
 var ChatView = Backbone.View.extend({
     initialize: function(options) {
         _.bindAll(this, 'render');
@@ -8,7 +27,9 @@ var ChatView = Backbone.View.extend({
         this.model.view = this;
     }
     , render: function() {
-        $(this.el).text(this.model.get('time') + ' - ' + this.model.get('name') + ': ' + this.model.get('text'));
+        var text = replaceURLWithHTMLLinks(this.model.get('text'));
+        text = replaceURLWithMarkDown(text);
+        $(this.el).html(this.model.get('time') + ' - ' + this.model.get('name') + ': ' + text);
         return this;
     }
     , remove: function() {
@@ -26,7 +47,7 @@ var MashView = Backbone.View.extend({
     }
 
     , render: function() {
-        $(this.el).text(this.model.get('time') + ' - ' + this.model.get('name') + ': ' + this.model.get('text'));
+        $(this.el).html(this.model.get('time') + ' - ' + this.model.get('name') + ': ' + this.model.get('text'));
         return this;
     }
 
@@ -74,6 +95,7 @@ var NodeChatView = Backbone.View.extend({
     , newDirectMessages: 0
 
     , clearAlerts: function(count) {
+        document.title = 'nodechat';
         this.newMessages = count;
         this.newDirectMessages = 0;
 
@@ -174,74 +196,6 @@ var NodeChatView = Backbone.View.extend({
     , removeUser: function(user) { 
         user.view.remove();
         $('#user_count').html(this.model.users.length + ' ');
-    }
-
-    , msgReceived: function(message){
-        switch(message.event) {
-            case 'initial':
-                this.model.mport(message.data);
-                break;
-            case 'chat':
-                log('chat received: ' + message.data );
-                var newChatEntry = new models.ChatEntry();
-                newChatEntry.mport(message.data);
-                this.model.chats.add(newChatEntry);
-
-                //remove old ones if we are getting too long
-                if (this.model.chats.length > 16)
-                    this.model.chats.remove(this.model.chats.first());
-                break;
-            case 'mash':
-                log('mash received: ' + message.data );
-                var mashEntry = new models.ChatEntry();
-                mashEntry.mport(message.data);
-                this.model.mashes.add(mashEntry);
-
-                //remove old ones if we are getting too long
-                if (this.model.mashes.length > 6)
-                    this.model.mashes.remove(this.model.mashes.first());
-                break;
-            case 'user:add':
-                log('user add received: ' + message.data );
-                var user = new models.User();
-                user.mport(message.data);
-
-                //In case of refresh/socket/whatever bugs, only add a user once
-                if(!this.model.users.some(function(u) { return u.get('name') == user.get('name'); }))
-                    this.model.users.add(user);
-                break;
-            case 'user:remove':
-                log('user delete received: ' + message.data );
-                var sUser = new models.User();
-                sUser.mport(message.data);
-
-                //Because we don't have the actual model, find anything with the same name and remove it
-                var users = this.model.users.filter(function(u) { return u.get('name') == sUser.get('name'); });
-                this.model.users.remove(users);
-                break;
-            case 'mashtag':
-                log('mash received: ' + message.data );
-                var newMashTag = new models.MashTagModel();
-                newMashTag.mport(message.data);
-                this.model.mashTags.add(newMashTag);
-                break;
-            case 'mashtag:delete':
-                log('mash:delete received for id: ' + message.data );
-                var mashTagToDelete  = new models.MashTagModel();
-                mashTagToDelete.mport(message.data);
-                this.model.mashTags.remove(mashTagToDelete);
-                break;
-            case 'direct':
-                log('direct received: ' + message.data );
-                var newDirect = new models.ChatEntry();
-                newDirect.mport(message.data);
-                this.model.directs.add(newDirect);
-
-                //remove old ones if we are getting too long
-                if (this.model.directs.length > 6)
-                    this.model.directs.remove(this.model.directs.first());
-                break;
-        }
     }
 
     , sendMessage: function(){

@@ -2,6 +2,7 @@ var express = require('express')
     , app = express.createServer()
     , connect = require('connect')
     , jade = require('jade')
+    //, socket = require('socket.io').listen(app, {transports: ['websocket', 'htmlfile', 'xhr-multipart', 'xhr-polling','jsonp-polling']})
     , socket = require('socket.io').listen(app)
     , _ = require('underscore')._
     , Backbone = require('backbone')
@@ -92,6 +93,10 @@ console.log('sessionid: ' + req.session.sid);
   res.render('login');
 });
 
+app.get('/disconnect', function(req, res){
+    res.render('disconnect');
+});
+
 app.post('/login', function(req, res){
   authenticate(req.body.username, req.body.password, function(err, user){
     if (user) {
@@ -145,16 +150,32 @@ rc.lrange('chatentries', -1000, -1, function(err, data) {
     }
 });
 
+function disconnectAndRedirectClient(client, fn) {
+    console.log('Disconnecting unauthenticated user');
+    client.send({ event: 'disconnect' });
+    client.connection.end();
+    fn();
+    return;
+}
 
 socket.on('connection', function(client){
     // helper function that goes inside your socket connection
     client.connectSession = function(fn) {
-        if (!client.request) return;
-        if (!client.request.headers) return;
-        if (!client.request.headers.cookie) return;
+        if (!client.request || !client.request.headers || !client.request.headers.cookie) {
+            console.log('Missing information on connect');
+            disconnectAndRedirectClient(client,fn('Null request/header/cookie!'));
+            return;
+        }
+
+        console.log('Cookie is' + client.request.headers.cookie);
 
         var match = client.request.headers.cookie.match(/connect\.sid=([^;]+)/);
-        if (!match || match.length < 2) return;
+        if (!match || match.length < 2) {
+            disconnectAndRedirectClient(client,function() {
+                console.log('Failed to find connect.sid in cookie')
+            });
+            return;
+        }
 
         var sid = unescape(match[1]);
 
@@ -164,8 +185,8 @@ socket.on('connection', function(client){
     };
 
     client.connectSession(function(err, data) {
-        if(err) { 
-            console.log('Connection failure'); 
+        if(err) {
+            console.log('Error on connectionSession: ' + err);
             return;
         }
 
@@ -294,15 +315,20 @@ function message(client, socket, msg){
         var chat = new models.ChatEntry();
         chat.mport(msg);
         client.connectSession(function(err, data) {
-            var connectedUser = getConnectedUser(data, client);
+            if(err) {
+                console.log('Error on connectSession: ' + err);
+                return;
+            }
 
+            var connectedUser = getConnectedUser(data, client);
             if(!connectedUser) {
                 console.log('Failed to connect user on message');
+                return;
             }
 
             var cleanChat = chat.get('text') + ' ';
-//            if (cleanChat)
- //               cleanChat = cleanChat.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            if (cleanChat)
+                cleanChat = cleanChat.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
             var userName = connectedUser.get('name');
             chat.set({'name': userName, 'text': cleanChat});
