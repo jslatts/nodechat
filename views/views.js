@@ -8,12 +8,16 @@ function replaceURLWithHTMLLinks(text) {
 }
 
 function replaceURLWithMarkDown(text) {
-    var regex_2asterisk = /\*{2}([a-z0-9%]+)\*{2}/ig;
-    var regex_2underscore = /\_{2}([a-z0-9%]+)\_{2}/ig;
-    var regex_asterisk = /\*([a-z0-9%]+)\*/ig;
-    var regex_underscore = /\_([a-z0-9%]+)\_/ig;
+    var regex_3asterisk = /\*{3}([a-z0-9% ]+)\*{3}/ig;
+    var regex_3underscore = /\_{3}([a-z0-9% ]+)\_{3}/ig;
+    var regex_2asterisk = /\*{2}([a-z0-9% ]+)\*{2}/ig;
+    var regex_2underscore = /\_{2}([a-z0-9% ]+)\_{2}/ig;
+    var regex_asterisk = /\*([a-z0-9% ]+)\*/ig;
+    var regex_underscore = /\_([a-z0-9% ]+)\_/ig;
 
-    var returntext = text.replace(regex_2asterisk,"<strong>$1</strong>")
+    var returntext = text.replace(regex_3asterisk,"<u>$1</u>")
+    returntext = returntext.replace(regex_3underscore,"<u>$1</u>")
+    returntext = returntext.replace(regex_2asterisk,"<strong>$1</strong>")
     returntext = returntext.replace(regex_2underscore,"<strong>$1</strong>")
     returntext = returntext.replace(regex_asterisk,"<em>$1</em>")
     returntext = returntext.replace(regex_underscore,"<em>$1</em>")
