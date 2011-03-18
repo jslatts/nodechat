@@ -9,6 +9,10 @@ var express = require('express')
     , models = require('./models/models')
     , path = require('path');
 
+require('joose');
+require('joosex-namespace-depended');
+require('hash');
+
 var redis = require('redis')
     , rc = redis.createClient()
     , redisStore = require('connect-redis');
@@ -69,11 +73,6 @@ function restrict(req, res, next) {
   }
 }
 
-function accessLogger(req, res, next) {
-  console.log('/restricted accessed by %s', req.session.user.name);
-  next();
-}
-
 //setup routes
 app.get('/logout', function(req, res){
   // destroy the user's session to log them out
@@ -84,12 +83,7 @@ app.get('/logout', function(req, res){
 });
 
 app.get('/login', function(req, res){
-console.log('sessionid: ' + req.session.sid);
-  if (req.session.user) {
-    req.session.success = 'Authenticated as ' + req.session.user.name
-      + ' click to <a href="/logout">logout</a>. '
-      + ' You may now access <a href="/restricted">/restricted</a>.';
-  }
+  console.log('GET /login - sessionid: ' + req.session.sid);
   res.render('login');
 });
 
@@ -109,6 +103,8 @@ app.post('/login', function(req, res){
         console.log('regenerated session id ' + req.session.id);
         req.session.cookie.httpOnly = false;
         req.session.user = user;
+        req.session.hash = Hash.sha512(user.pass);
+        console.log('Storing new hash for user ' + user.name + ': ' + req.session.hash);
         res.redirect('/');
       });
     } else {
@@ -311,6 +307,9 @@ function getConnectedUser(data, client) {
 function message(client, socket, msg){
     if(msg.rediskey) {
         console.log('received from client: ' + msg.rediskey);
+    }
+    if(msg.event === 'clientauthrequest') {
+        console.log('clientauthrequest received with hash ' + msg.data);
     }
     else {
         var chat = new models.ChatEntry();
@@ -626,7 +625,7 @@ path.exists(config_file, function (exists) {
 
     app.get('/', restrict, function(req, res){
         res.render('index', {
-            locals: { name: req.session.user.name, port: port }
+            locals: { name: req.session.user.name, port: port, hash: JSON.stringify(req.session.hash) }
         });
     });
 });

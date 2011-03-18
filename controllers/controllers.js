@@ -4,8 +4,12 @@
 NodeChatController = {
     init: function(options) {
         this.socket = new io.Socket(null, {port: options.port});
-
         var mySocket = this.socket;
+
+        this.hash = options.hash;
+        var hash = this.hash;
+        log('hash is ' + options.hash);
+
 
         this.model = new models.NodeChatModel();
         this.view = new NodeChatView({model: this.model, socket: this.socket, el: $('#content')});
@@ -14,6 +18,12 @@ NodeChatController = {
 
 
         this.socket.on('connect', function() { 
+            mySocket.send({
+                event: 'clientauthrequest',
+                data: hash
+            });
+            log('hash is ' + hash);
+
             log('Connected! Oh hai!');
             this.connected = true;
             view.setConnected(true);
@@ -53,7 +63,7 @@ NodeChatController = {
                 this.model.mport(message.data);
                 break;
             case 'chat':
-                log('chat received: ' + message.data );
+//                log('chat received: ' + message.data );
                 var newChatEntry = new models.ChatEntry();
                 newChatEntry.mport(message.data);
                 this.model.chats.add(newChatEntry);
