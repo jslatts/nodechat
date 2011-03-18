@@ -16,6 +16,7 @@ require('hash');
 var redis = require('redis')
     , rc = redis.createClient()
     , redisStore = require('connect-redis');
+    //, redisStore = require('./connect-redis');
 
 rc.on('error', function(err) {
     console.log('Error ' + err);
@@ -29,7 +30,8 @@ var config_file = '/home/node/nodechat_config';
 //configure express 
 app.use(express.bodyParser());
 app.use(express.cookieParser());
-app.use(express.session({ store: new redisStore({maxAge: 24 * 60 * 60 * 1000}), secret: 'Secretly I am an elephant' }));
+//app.use(express.session({ store: new redisStore({maxAge: 10 * 24 * 60 * 60 * 1000}), secret: 'Secretly I am an elephant' }));
+app.use(express.session({ store: new redisStore({maxAge: 10 * 1000}), secret: 'Secretly I am an elephant' }));
 
 app.set('view engine', 'jade');
 app.set('view options', {layout: false});
@@ -101,6 +103,7 @@ app.post('/login', function(req, res){
         // in the session store to be retrieved,
         // or in this case the entire user object
         console.log('regenerated session id ' + req.session.id);
+        req.session.cookie.maxAge = 100 * 24 * 60 * 60 * 1000; //Force longer cookie age
         req.session.cookie.httpOnly = false;
         req.session.user = user;
         req.session.hash = Hash.sha512(user.pass);
@@ -230,7 +233,10 @@ function sendInitialDataToClient(client) {
 }
 
 function getConnectedUser(data, client) {
-    if(!data || !data.user || !data.user.name) return;
+    if(!data || !data.user || !data.user.name) {
+        console.log('[getConnectedUser] called with null data, data.user or data.user.name');
+        return;
+    }
 
     cleanName = data.user.name.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -316,13 +322,17 @@ function message(client, socket, msg){
         chat.mport(msg);
         client.connectSession(function(err, data) {
             if(err) {
-                console.log('Error on connectSession: ' + err);
+                disconnectAndRedirectClient(client,function() {
+                    console.log('[message] Error on connectSession: ' + err);
+                });
                 return;
             }
 
             var connectedUser = getConnectedUser(data, client);
             if(!connectedUser) {
-                console.log('Failed to connect user on message');
+                disconnectAndRedirectClient(client,function() {
+                    console.log('[message] connectedUser is null or empty');
+                });
                 return;
             }
 
