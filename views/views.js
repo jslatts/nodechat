@@ -98,6 +98,29 @@ var NodeChatView = Backbone.View.extend({
     newMessages: 0
     , newDirectMessages: 0
 
+    , initialize: function(options) {
+        _.bindAll(this, 'addUser', 'removeUser', 'addChat', 'addDirect', 'addMash', 'triggerAutoComplete', 'suggestAutoComplete', 'sendMessages');
+        this.model.chats.bind('add', this.addChat);
+        this.model.chats.bind('remove', this.removeChat);
+        this.model.mashTags.bind('add', this.addMashTag);
+        this.model.mashTags.bind('remove', this.removeMashTag);
+        this.model.mashes.bind('add', this.addMash);
+        this.model.mashes.bind('remove', this.removeMash);
+        this.model.directs.bind('add', this.addDirect);
+        this.model.directs.bind('remove', this.removeDirect);
+        this.model.users.bind('add', this.addUser);
+        this.model.users.bind('remove', this.removeUser);
+        this.socket = options.socket;
+        this.chunkSizes = new Array();
+        that = this;
+        $('#message_box').focusin(function() { that.clearAlerts(0); }); //Clear the alerts when the box gets focus
+    }
+
+    , events: {
+        'submit #message_form' : 'sendMessage'
+        , 'keydown #message_form' : 'triggerAutoComplete'
+        , 'keypress #message_form' : 'suggestAutoComplete'
+    }
     , clearAlerts: function(count) {
         document.title = 'nodechat';
         this.newMessages = count;
@@ -137,28 +160,6 @@ var NodeChatView = Backbone.View.extend({
             }, 2000);
         }
     }
-
-    , initialize: function(options) {
-        _.bindAll(this, 'addUser', 'removeUser', 'addChat', 'addDirect');
-        this.model.chats.bind('add', this.addChat);
-        this.model.chats.bind('remove', this.removeChat);
-        this.model.mashTags.bind('add', this.addMashTag);
-        this.model.mashTags.bind('remove', this.removeMashTag);
-        this.model.mashes.bind('add', this.addMash);
-        this.model.mashes.bind('remove', this.removeMash);
-        this.model.directs.bind('add', this.addDirect);
-        this.model.directs.bind('remove', this.removeDirect);
-        this.model.users.bind('add', this.addUser);
-        this.model.users.bind('remove', this.removeUser);
-        this.socket = options.socket;
-        that = this;
-        $('#message_box').focusin(function() { that.clearAlerts(0); }); //Clear the alerts when the box gets focus
-    }
-
-    , events: {
-        'submit #message_form' : 'sendMessage'
-    }
-
     , addChat: function(chat) {
         var view = new ChatView({model: chat});
         $('#chat_list').append(view.render().el);
@@ -223,10 +224,52 @@ var NodeChatView = Backbone.View.extend({
         var nameField = $('input[name=user_name]');
         var chatEntry = new models.ChatEntry({name: nameField.val(), text: inputField.val()});
         this.socket.send(chatEntry.xport());
+
+        var mashTags = mashlib.getChunksFromString(inputField.val(), '#', true);
+        var directs = mashlib.getChunksFromString(inputField.val(), '@', true);
+
         inputField.val('');
+        this.chunkSizes = new Array();
+
+        if (directs.length > 0)
+        {
+            inputField.val(directs.join(' ') + ' ');
+
+            this.chunkSizes = _.map(directs, function(d) {
+                return d.length;
+            });
+        
+        }
+        if (mashTags.length > 0)
+        {
+            inputField.val(inputField.val() + mashTags.join(' ') + ' ');
+
+            this.chunkSizes = this.chunkSizes.concat(_.map(mashTags, function(m) {
+                return m.length;
+            }));
+        }
+
         this.clearAlerts(-1);
     }
-
+    , suggestAutoComplete: function(key) {
+    }
+    , triggerAutoComplete: function(key) {
+        //If backspace has been pressed, and we have some chunks, look into autodelete 
+        if(key.keyCode == 8 && this.chunkSizes.length > 0) {
+            var inputField = $('input[name=message]');
+            log(_.reduce(this.chunkSizes, function(memo, num){ return memo + num; }, 0));
+            //Only autodelete if we are right after the chunks
+            if (inputField.val().length == _.reduce(this.chunkSizes, function(memo, num){ return memo + num + 1; }, 0))
+            {
+                var chunk = this.chunkSizes.pop();
+                var current = inputField.val();
+                current = current.substring(0, current.length - chunk);
+                inputField.val(current);
+            }
+        }
+//        if(key.keyCode == 9)
+            //alert('tab caught');
+    }
     , setConnected: function(connected) {
         if(connected)
             $('#disconnectMessage').hide();
@@ -234,3 +277,4 @@ var NodeChatView = Backbone.View.extend({
             $('#disconnectMessage').show();
     }
 });
+

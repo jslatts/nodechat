@@ -7,6 +7,7 @@ var express = require('express')
     , _ = require('underscore')._
     , Backbone = require('backbone')
     , models = require('./models/models')
+    , mashlib = require('./lib/mashlib')
     , stylus = require('stylus')
     , fs = require('fs')
     , path = require('path');
@@ -47,19 +48,11 @@ function compile(str, path, fn) {
     .set('force', true)
 };
 
-//Hack, delete the old css. For some reason the middleware is not recompiling
-fs.unlink('./public/main.css', function(err) {
-    if (err) {
-        console.log('Unlink failed for ./public/main.css: ' + err);
-    }
 
-    console.log('Unlinked ./public/main.css');
-    app.use(stylus.middleware({
-        src: './views'
-      , dest: './public'
-    }));
-});
-
+app.use(stylus.middleware({
+    src: './views'
+  , dest: './public'
+}));
 
 
 //handle auth
@@ -488,7 +481,7 @@ function handleMashTags(chat, user) {
         return;
     }
 
-    var mashTags = getChunksFromString(chat.get('text'), '#');
+    var mashTags = mashlib.getChunksFromString(chat.get('text'), '#');
     if(mashTags.length > 0) {
         var alreadyNotifiedUsers = new Array(); //Make sure we only send a multi-tagged chat once
 
@@ -550,7 +543,7 @@ function handleMashTags(chat, user) {
 
 //Look for unsubscription notifications
 function checkForMashTagUnSub(chat, user) {
-    var mashTagsToRemove = getChunksFromString(chat.get('text'), '-');
+    var mashTagsToRemove = mashlib.getChunksFromString(chat.get('text'), '-');
     if(mashTagsToRemove.length > 0) {
         for (var t in mashTagsToRemove) {
             var foundTag = nodeChatModel.mashTags.find(function(tag){return tag.get('name') == mashTagsToRemove[t];});
@@ -587,29 +580,6 @@ function notifySubscribedMashTagUsers(chat, mashTag, doNotNotifyList){
         //Add the user to do not call list so they only get one copy
         doNotNotifyList[user.get('name')] = 1;
     });
-}
-
-//Returns chunks with the delimiter _stripped_
-function getChunksFromString(chatText, delimiter) {
-    var chunkIndex = chatText.indexOf(delimiter);
-    var chunks = new Array();
-    var startPos = 0;
-
-    while(startPos <= chatText.length && chunkIndex > -1) {
-
-        //Grab the tag and push it on the array
-        var endPos = chatText.indexOf(' ', chunkIndex+1);
-        chunks.push(chatText.substring(chunkIndex+1, endPos).toLowerCase());
-        
-        //Setup for the next one
-        startPos = endPos +1;
-        chunkIndex = chatText.indexOf(delimiter, startPos);
-    }
-    
-    if(chunks.length > 0)
-        console.log('Found chunks: ' + chunks + ' for delimiter: ' + delimiter);
-
-    return chunks;
 }
 
 //Handle client disconnect decrementing the count then running the continuation
@@ -651,6 +621,12 @@ path.exists(config_file, function (exists) {
         console.log('no config found. starting in local dev mode');
         app.listen(dev_port);
         var port = dev_port;
+
+        //Hack, delete the old css. For some reason the middleware is not recompiling
+        fs.unlink('./public/main.css', function(err) {
+            if (err) console.log('Unlink failed for ./public/main.css: ' + err);
+            else console.log('Unlinked ./public/main.css');
+        });
     }
     else {
         console.log('config found. starting in server mode');
