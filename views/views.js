@@ -152,16 +152,22 @@ var NodeChatView = Backbone.View.extend({
         this.model.users.bind('remove', this.removeUser);
         this.socket = options.socket;
         that = this;
-        $('#messageBox').focusin(function() { that.clearAlerts(0); }); //Clear the alerts when the box gets focus
+        $('#message_box').focusin(function() { that.clearAlerts(0); }); //Clear the alerts when the box gets focus
     }
 
     , events: {
-        'submit #messageForm' : 'sendMessage'
+        'submit #message_form' : 'sendMessage'
     }
 
     , addChat: function(chat) {
         var view = new ChatView({model: chat});
         $('#chat_list').append(view.render().el);
+        $('#chat_list')[0].scrollTop = $('#chat_list')[0].scrollHeight;
+        
+        //remove old ones if we are getting too long
+        if (this.model.chats.length > 1000)
+            this.model.chats.remove(this.model.chats.first());
+
 
         ++this.newMessages;
         if(this.newMessages > 0) 
@@ -172,6 +178,11 @@ var NodeChatView = Backbone.View.extend({
     , addMash: function(mash) {
         var view = new MashView({model: mash});
         $('#mashtag_chat_list').append(view.render().el);
+        $('#mashtag_chat_list')[0].scrollTop = $('#mashtag_chat_list')[0].scrollHeight;
+
+        //remove old ones if we are getting too long
+        if (this.model.mashes.length > 500)
+            this.model.mashes.remove(this.model.mashes.first());
     }
     , removeMash: function(mash) { mash.view.remove(); }
 
@@ -183,12 +194,17 @@ var NodeChatView = Backbone.View.extend({
 
     , addDirect: function(direct) {
         var view = new ChatView({model: direct});
-        $('#direct_list').append(view.render().el);
+        $('#direct_chat_list').append(view.render().el);
+        $('#direct_chat_list')[0].scrollTop = $('#direct_chat_list')[0].scrollHeight;
 
         ++this.newDirectMessages;
         log('have directs' + this.newDirectMessages);
         if(this.newDirectMessages > 0) 
             this.setDirectAlert();
+
+        //remove old ones if we are getting too long
+        if (this.model.directs.length > 500)
+            this.model.directs.remove(this.model.directs.first());
     }
     , removeDirect: function(direct) { direct.view.remove(); }
 

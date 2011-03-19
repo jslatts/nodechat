@@ -7,6 +7,8 @@ var express = require('express')
     , _ = require('underscore')._
     , Backbone = require('backbone')
     , models = require('./models/models')
+    , stylus = require('stylus')
+    , fs = require('fs')
     , path = require('path');
 
 require('joose');
@@ -27,16 +29,40 @@ redis.debug_mode = false;
 var dev_port = 8000;
 var server_port = 80;
 var config_file = '/home/node/nodechat_config';
- 
+
 //configure express 
 app.use(express.bodyParser());
 app.use(express.cookieParser());
-//app.use(express.session({ store: new redisStore({maxAge: 10 * 24 * 60 * 60 * 1000}), secret: 'Secretly I am an elephant' }));
-app.use(express.session({ store: new redisStore({maxAge: 10 * 1000}), secret: 'Secretly I am an elephant' }));
+app.use(express.session({ store: new redisStore(), secret: 'Secretly I am an elephant' }));
+app.use(express.static('./public'));
 
 app.set('view engine', 'jade');
 app.set('view options', {layout: false});
 
+//setup stylus
+function compile(str, path, fn) {
+  stylus(str)
+    .set('filename', path)
+    .set('compress', true)
+    .set('force', true)
+};
+
+//Hack, delete the old css. For some reason the middleware is not recompiling
+fs.unlink('./public/main.css', function(err) {
+    if (err) {
+        console.log('Unlink failed for ./public/main.css: ' + err);
+    }
+
+    console.log('Unlinked ./public/main.css');
+    app.use(stylus.middleware({
+        src: './views'
+      , dest: './public'
+    }));
+});
+
+
+
+//handle auth
 
 function authenticate(name, pass, fn) {
     console.log('Auth for ' + name + ' with password ' + pass);
@@ -210,8 +236,8 @@ topPoster.count = 0;
 topPoster.lettercount = 0;
 
 function sendInitialDataToClient(client) {
-    if (nodeChatModel.chats.length > 16)
-        var chatHistory = nodeChatModel.chats.rest(nodeChatModel.chats.length-16);
+    if (nodeChatModel.chats.length > 100)
+        var chatHistory = nodeChatModel.chats.rest(nodeChatModel.chats.length-100);
     else 
         var chatHistory = nodeChatModel.chats;
 

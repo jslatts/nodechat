@@ -2,6 +2,7 @@
 html(lang='en')
   head
     title nodechat
+    link(rel='stylesheet', href='/main.css')
     script(type='text/javascript', src='/lib/jquery-1.5.1.js')
     script(type='text/javascript', src='/lib/underscore.js')
     script(type='text/javascript', src='/lib/backbone.js')
@@ -24,8 +25,8 @@ html(lang='en')
         
       });
   body
-    div(style='width:100%;float:left;clear:left')#content
-      div(style='float:right')#help
+    #content
+      #help
         p @user to send direct messages
           br
           | #mashtag to subscribe to a topic
@@ -33,35 +34,39 @@ html(lang='en')
           | -mashtag to unsubscribe 
           br
           a(href='/logout') logout
-      h1(style='margin-top:0px') nodechat
-      div(style='margin-top:0px;color:red;display:none;')#disconnectMessage 
+      h1 nodechat 
+      div#version v0.2
+
+      #disconnectMessage 
         | disconnected - trying to reconnect...
 
-      div(style='float:left;')
+      #status_box
         span#user_count 0
         | users online: 
-      div(style='float:left;margin-left:10px;')#user_list
-      p(style='float:left;clear:left;')
+      #user_list
+
+      p#logon_name
         label You are connected as: 
           = locals.name
 
-      div(style='float:left;width:100%')
-        div(style='width:40%; float:right; overflow:hidden; word-wrap: break-word;')
-          p
-            | Super Secret Chat Messages (@)
-            #direct_list
-          p
-            | Mashtags
-            div(style='float:left')#mashtag_list
-            div(style='float:left;clear:both')#mashtag_chat_list
-        div(style='width:40%;float:left;')#chat_list
+      #chat_box
           p
             | Fun Chat Messages
-        div(style='float:left;width:50%;clear:both;')
-          form(method='post', action='#', onsubmit='return false')#messageForm
+          #chat_list
+          form(method='post', action='#', onsubmit='return false')#message_form
             p
-              label Message: 
-              br
-              input(type='text', name='message', size='100')#messageBox
-              input(type='submit', value='send')
+              input(type='text', name='message', size='240')#message_box
+              input(type='submit', value='send')#message_send_button
+      #direct_box
+        p
+          | Super Secret Chat Messages (@)
+        #direct_chat_list
+
+      #mashtag_box
+        p Mashes
+        #mashtag_chat_list
+        p Followed Mashtags
+        #mashtag_list
+         
+
 
