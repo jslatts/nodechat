@@ -7,7 +7,6 @@ Here it the roadmap for the next week or so. Any suggestions or bug fixes are we
 TODO:
 
  - History
- - Style sheet
  - Persist user tag preferences
  - Persist/restore directs/mashtag subscriptions
  - Implement UX to display historical mashes
