@@ -41,6 +41,7 @@ h1 {
 }
 #message_box {
   width: 90%;
+  border: solid #808080 1px;
 }
 #message_send_button {
   margin-left: 10px;
