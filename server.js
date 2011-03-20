@@ -129,6 +129,9 @@ app.post('/login', function(req, res){
         req.session.user = user;
         if(user.pass)
             req.session.hash = Hash.sha512(user.pass);
+        else
+            req.session.hash = 'No Hash'; 
+
         console.log('Storing new hash for user ' + user.name + ': ' + req.session.hash);
         res.redirect('/');
       });
