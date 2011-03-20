@@ -505,7 +505,7 @@ function handleDirects(chat, originalUser) {
 
     if(direct) {
         console.log('looking for direct targer user ' + direct);
-        var foundUser = nodeChatModel.users.find(function(user){return user.get('name') == direct;});
+        var foundUser = nodeChatModel.users.find(function(user){return user.get('name').toLowerCase() == direct;});
         
         console.log('found user is ' + foundUser);
         if (foundUser) {
@@ -540,7 +540,7 @@ function getDirectsFromString(chatText) {
     var direct = null;
     if(directIndex > -1) {
         var endPos = chatText.indexOf(' ', directIndex+1);
-        direct = chatText.substring(directIndex+1, endPos);
+        direct = chatText.substring(directIndex+1, endPos).toLowerCase();
         console.log('Found direct: ' + direct);
     }
 

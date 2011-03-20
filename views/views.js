@@ -314,10 +314,13 @@ var NodeChatView = Backbone.View.extend({
             var chunk = mashlib.getChunksFromString(inputField.val(), '#', 0, true)[0];
             this.changeDisplayMode('mash', chunk);
         }
-        if(inputField.val().length >= 1 && inputField.val()[0] == '@' ) {
+        else if(inputField.val().length >= 1 && inputField.val()[0] == '@' ) {
             var chunk = mashlib.getChunksFromString(inputField.val(), '@', 0, true)[0];
             this.changeDisplayMode('direct', chunk);
         } 
+        else {
+            this.changeDisplayMode('main', '#main');
+        }
     }
     , triggerAutoComplete: function(key) {
         //If backspace has been pressed, and we have some chunks, look into autodelete 
@@ -357,11 +360,11 @@ var NodeChatView = Backbone.View.extend({
                     var chunk = mashlib.getChunksFromString(currentText, '@', lastAT);
 
                     var match = this.model.users.find(function(u) {
-                        return (u.get('name').indexOf(chunk) != -1);
+                        return (u.get('name').toLowerCase().indexOf(chunk) != -1);
                     });
 
                     if(match) {
-                        inputField.val(currentText.substring(0, lastAT+1) + match.get('name') + ' ');
+                        inputField.val(currentText.substring(0, lastAT+1) + match.get('name').toLowerCase() + ' ');
                         this.changeDisplayMode('direct', '@' + match.get('name'));
                     }
                 }
@@ -371,7 +374,7 @@ var NodeChatView = Backbone.View.extend({
                     var chunk = mashlib.getChunksFromString(currentText, '#', lastMT);
 
                     var match = this.model.globalMashTags.find(function(t) {
-                        return (t.get('name').indexOf(chunk) != -1);
+                        return (t.get('name').toLowerCase().indexOf(chunk) != -1);
                     });
 
                     if(match) {

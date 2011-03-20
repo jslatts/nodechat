@@ -11,7 +11,8 @@ TODO:
  - Implement UX to display historical mashes
  - away messages
  - security issue with dm mash spying
- - Bug for reconnected tags not transmitting
+ - join/leave messages
+ - hash passwords
 
 
 -jslatts
