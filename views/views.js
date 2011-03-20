@@ -277,6 +277,10 @@ var NodeChatView = Backbone.View.extend({
 
     , sendMessage: function(){
         var inputField = $('input[name=message]');
+
+        if (inputField.val().length > 400)
+            return;
+
         var nameField = $('input[name=user_name]');
         var chatEntry = new models.ChatEntry({name: nameField.val(), text: inputField.val()});
         this.socket.send(chatEntry.xport());

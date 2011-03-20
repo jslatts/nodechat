@@ -13,7 +13,6 @@ TODO:
  - security issue with dm mash spying
  - join/leave messages
  - hash passwords
- - first time login bug
-
+ - name change to yourself bug
 
 -jslatts

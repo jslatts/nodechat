@@ -106,7 +106,7 @@ app.get('/logout', function(req, res){
 });
 
 app.get('/login', function(req, res){
-  console.log('GET /login - sessionid: ' + req.session.sid);
+  console.log('GET /login');
   res.render('login');
 });
 
@@ -466,7 +466,7 @@ function message(client, socket, msg){
                         topPoster.lettercount = 1;
                     }
 
-                    if(chat.get('text').length > 140)
+                    if(chat.get('text').length > 400)
                         return;
 
                     rc.incr('next.chatentry.id', function(err, newId) {
