@@ -99,11 +99,13 @@ var NodeChatView = Backbone.View.extend({
     , newDirectMessages: 0
 
     , initialize: function(options) {
-        _.bindAll(this, 'addUser', 'removeUser', 'addChat', 'addDirect', 'addMash', 'triggerAutoComplete', 'suggestAutoComplete', 'sendMessages');
+        _.bindAll(this, 'addUser', 'removeUser', 'addChat', 'addDirect', 'addMash', 'triggerAutoComplete', 'suggestAutoComplete', 'sendMessages', 'changeDisplayMode');
         this.model.chats.bind('add', this.addChat);
         this.model.chats.bind('remove', this.removeChat);
         this.model.mashTags.bind('add', this.addMashTag);
         this.model.mashTags.bind('remove', this.removeMashTag);
+        this.model.globalMashTags.bind('add', this.addGlobalMashTag);
+        this.model.globalMashTags.bind('remove', this.removeGlobalMashTag);
         this.model.mashes.bind('add', this.addMash);
         this.model.mashes.bind('remove', this.removeMash);
         this.model.directs.bind('add', this.addDirect);
@@ -112,6 +114,7 @@ var NodeChatView = Backbone.View.extend({
         this.model.users.bind('remove', this.removeUser);
         this.socket = options.socket;
         this.chunkSizes = new Array();
+        this.changeDisplayMode('main', '#main');
         that = this;
         $('#message_box').focusin(function() { that.clearAlerts(0); }); //Clear the alerts when the box gets focus
     }
@@ -119,7 +122,44 @@ var NodeChatView = Backbone.View.extend({
     , events: {
         'submit #message_form' : 'sendMessage'
         , 'keydown #message_form' : 'triggerAutoComplete'
-        , 'keypress #message_form' : 'suggestAutoComplete'
+        , 'keyup #message_form' : 'suggestAutoComplete'
+    }
+    , changeDisplayMode: function(mode, boxTitle) {
+        boxTitle = boxTitle || 'undefined';
+        $('#box_title').text(boxTitle);
+
+        if (mode === this.currentDisplayMode) return;
+
+
+        switch(mode) {
+            case 'main':
+                $('#direct_box').fadeOut( function() {
+                    $('#mashtag_box').fadeOut( function() {
+                        $('#chat_box').fadeIn();
+                        $('#chat_list')[0].scrollTop = $('#chat_list')[0].scrollHeight;
+                        this.currentDisplayMode = 'main';
+                    });
+                });
+                break;
+            case 'mash':
+                $('#chat_box').fadeOut( function() {
+                    $('#direct_box').fadeOut( function() {
+                        $('#mashtag_box').fadeIn();
+                        $('#mashtag_list')[0].scrollTop = $('#mashtag_list')[0].scrollHeight;
+                        this.currentDisplayMode = 'mash';
+                    });
+                });
+                break;
+            case 'direct':
+                $('#chat_box').fadeOut( function() {
+                    $('#mashtag_box').fadeOut( function() {
+                        $('#direct_box').fadeIn();
+                        $('#direct_chat_list')[0].scrollTop = $('#direct_chat_list')[0].scrollHeight;
+                        this.currentDisplayMode = 'direct';
+                    });
+                });
+                break;
+        }
     }
     , clearAlerts: function(count) {
         document.title = 'nodechat';
@@ -191,7 +231,17 @@ var NodeChatView = Backbone.View.extend({
         var view = new MashTagView({model: mashTag});
         $('#mashtag_list').append(view.render().el);
     }
-    , removeMashTag: function(mashTag) { mashTag.view.remove(); }
+    , removeMashTag: function(mashTag) { 
+        mashTag.view.remove();
+    }
+
+    , addGlobalMashTag: function(mashTag) {
+        var view = new MashTagView({model: mashTag});
+        $('#global_mashtag_list').append(view.render().el);
+    }
+    , removeGlobalMashTag: function(mashTag) { 
+        mashTag.view.remove();
+    }
 
     , addDirect: function(direct) {
         var view = new ChatView({model: direct});
@@ -206,6 +256,12 @@ var NodeChatView = Backbone.View.extend({
         //remove old ones if we are getting too long
         if (this.model.directs.length > 500)
             this.model.directs.remove(this.model.directs.first());
+
+        this.changeDisplayMode('direct', '@' + direct.get('name'));
+
+        var inputField = $('#message_field');
+        if(inputField.val().length === 0)
+            inputField.val('@' + direct.get('name') + ' '); 
     }
     , removeDirect: function(direct) { direct.view.remove(); }
 
@@ -252,6 +308,16 @@ var NodeChatView = Backbone.View.extend({
         this.clearAlerts(-1);
     }
     , suggestAutoComplete: function(key) {
+        var inputField = $('input[name=message]');
+
+        if(inputField.val().length >= 1 && inputField.val()[0] == '#' ) {
+            var chunk = mashlib.getChunksFromString(inputField.val(), '#', 0, true)[0];
+            this.changeDisplayMode('mash', chunk);
+        }
+        if(inputField.val().length >= 1 && inputField.val()[0] == '@' ) {
+            var chunk = mashlib.getChunksFromString(inputField.val(), '@', 0, true)[0];
+            this.changeDisplayMode('direct', chunk);
+        } 
     }
     , triggerAutoComplete: function(key) {
         //If backspace has been pressed, and we have some chunks, look into autodelete 
@@ -265,9 +331,17 @@ var NodeChatView = Backbone.View.extend({
                 var current = inputField.val();
                 current = current.substring(0, current.length - chunk);
                 inputField.val(current);
+
+                log('delete length is ' + current.length);
+                //If we are at zero when this is done, switch to main window
+                if(current.length <= 1)  {
+                    log('made it in');
+                    this.changeDisplayMode('main', '#main');
+                }
             }
-        }
-        if(key.keyCode == 9) {
+
+        } 
+        else if(key.keyCode == 9) {
             key.preventDefault();
 
             var inputField = $('input[name=message]');
@@ -286,25 +360,27 @@ var NodeChatView = Backbone.View.extend({
                         return (u.get('name').indexOf(chunk) != -1);
                     });
 
-                    if(match)
-                        inputField.val(currentText.substring(0, lastAT+1) + match.get('name'));
-
+                    if(match) {
+                        inputField.val(currentText.substring(0, lastAT+1) + match.get('name') + ' ');
+                        this.changeDisplayMode('direct', '@' + match.get('name'));
+                    }
                 }
                 //Of if we have a # to handle
                 else if(lastMT > -1 && lastMT > lastSpace)
                 {
                     var chunk = mashlib.getChunksFromString(currentText, '#', lastMT);
 
-                    var match = this.model.mashTags.find(function(t) {
+                    var match = this.model.globalMashTags.find(function(t) {
                         return (t.get('name').indexOf(chunk) != -1);
                     });
 
-                    if(match)
-                        inputField.val(currentText.substring(0, lastMT+1) + match.get('name'));
+                    if(match) {
+                        inputField.val(currentText.substring(0, lastMT+1) + match.get('name') + ' ');
+                        this.changeDisplayMode('mash', '#' + match.get('name'));
+                    }
                 }
             }
         }
-
     }
     , setConnected: function(connected) {
         if(connected)

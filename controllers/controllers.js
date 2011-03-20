@@ -77,7 +77,7 @@ NodeChatController = {
                 break;
 
             case 'user:add':
-                log('user add received: ' + message.data );
+                log('user:add received: ' + message.data );
                 var user = new models.User();
                 user.mport(message.data);
 
@@ -87,7 +87,7 @@ NodeChatController = {
                 break;
 
             case 'user:remove':
-                log('user delete received: ' + message.data );
+                log('user:remove received: ' + message.data );
                 var sUser = new models.User();
                 sUser.mport(message.data);
 
@@ -97,17 +97,31 @@ NodeChatController = {
                 break;
 
             case 'mashtag':
-                log('mash received: ' + message.data );
+                log('mashtag received: ' + message.data );
                 var newMashTag = new models.MashTagModel();
                 newMashTag.mport(message.data);
                 this.model.mashTags.add(newMashTag);
                 break;
 
             case 'mashtag:delete':
-                log('mash:delete received for id: ' + message.data );
+                log('mashtag:delete received for id: ' + message.data );
                 var mashTagToDelete  = new models.MashTagModel();
                 mashTagToDelete.mport(message.data);
                 this.model.mashTags.remove(mashTagToDelete);
+                break;
+
+            case 'globalmashtag':
+                log('globalmashtag received: ' + message.data );
+                var newMashTag = new models.MashTagModel();
+                newMashTag.mport(message.data);
+                this.model.globalMashTags.add(newMashTag);
+                break;
+
+            case 'globalmashtag:delete':
+                log('globalmashtag:delete received for id: ' + message.data );
+                var mashTagToDelete  = new models.MashTagModel();
+                mashTagToDelete.mport(message.data);
+                this.model.globalMashTags.remove(mashTagToDelete);
                 break;
 
             case 'direct':

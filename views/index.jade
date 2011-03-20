@@ -36,7 +36,7 @@ html(lang='en')
           br
           a(href='/logout') logout
       h1 nodechat 
-      div#version v0.2.1
+      div#version v0.2.2
 
       #disconnectMessage 
         | disconnected - trying to reconnect...
@@ -50,24 +50,28 @@ html(lang='en')
         label You are connected as: 
           = locals.name
 
+      label#box_title Initial
+
       #chat_box
-          p
-            | Fun Chat Messages
-          #chat_list
-          form(method='post', action='#', onsubmit='return false')#message_form
-            p
-              input(type='text', name='message', size='240')#message_box
-              input(type='submit', value='send')#message_send_button
+        #chat_list
+
       #direct_box
-        p
-          | Super Secret Chat Messages (@)
         #direct_chat_list
 
       #mashtag_box
-        p Mashes
         #mashtag_chat_list
+         
+      #message_box
+        form(method='post', action='#', onsubmit='return false')#message_form
+          p
+            input(type='text', name='message', size='240')#message_field
+            input(type='submit', value='send')#message_send_button
+
+      #global_mashtag_box
+        p(style='margin-top:0px')
+          | Global Mashtags
+        #global_mashtag_list
         p Followed Mashtags
         #mashtag_list
-         
 
 

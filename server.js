@@ -173,6 +173,28 @@ rc.lrange('chatentries', -1000, -1, function(err, data) {
     }
 });
 
+
+rc.smembers('mashtags', function(err, data) {
+    if (err) { console.log('SMEMBERS for key mashtags failed with error: ' + err); }
+    else if (data) {
+        _.each(data, function(jsonMashTag) {
+            try {
+                var mashTag = new models.MashTagModel();
+                mashTag.mport(jsonMashTag);
+                nodeChatModel.globalMashTags.add(mashTag);
+            }
+            catch(err) {
+                console.log('Failed to revive mashTag ' + jsonMashTag + ' with err ' + err);
+            }
+        });
+
+        console.log('Revived ' + nodeChatModel.globalMashTags.length + ' mashtags');
+    }
+    else {
+        console.log('SMEMBERS for key mashtags returned no data');
+    }
+});
+
 function disconnectAndRedirectClient(client, fn) {
     console.log('Disconnecting unauthenticated user');
     client.send({ event: 'disconnect' });
@@ -252,6 +274,13 @@ function sendInitialDataToClient(client) {
             data: chat.xport()
         });
     });
+
+    nodeChatModel.globalMashTags.forEach(function(mashTag) {
+        client.send({
+            event: 'globalmashtag',
+            data: mashTag.xport({recurse: false})
+        });
+    });
 }
 
 function getConnectedUser(data, client) {
@@ -270,13 +299,47 @@ function getConnectedUser(data, client) {
         connectedUser.clientList.push(client);
 
         nodeChatModel.users.add(connectedUser);
-        console.log('new user: ' + connectedUser.get('name'));
+        console.log('[getConnectedUser] new user: ' + connectedUser.get('name') + ' on client: ' + client.sessionId);
     
         var sUser = new models.User({name:connectedUser.get('name')});
-        console.log('Connected User ' + sUser.xport({recurse: false}));
         client.broadcast({
             event: 'user:add',
             data: sUser.xport({recurse: false})
+        });
+
+
+        //Grab mashtag subscriptions for user
+        var rKey = 'user:' + connectedUser.get('name') + '.mashtags';
+        rc.smembers(rKey, function(err, data) {
+            if (err) console.log('Error retrieving ' + rKey + ': ' + err); 
+            else if (data) {
+                _.each(data, function(tagId) {
+                try {
+                    //Try and find the tag in the current active list
+                    mashTag = nodeChatModel.globalMashTags.get(tagId);
+
+                    //If not found, create it and add it to the global list
+                    if(!mashTag) {
+                       console.log('[getConnectedUser] tried to add invalid tag to user subscription');
+                       return;
+                    }
+                        
+                    mashTag.watchingUsers.add(connectedUser);
+                    sendMashTagsToUser(connectedUser, mashTag);
+                    connectedUser.followedMashTags.add(mashTag);
+
+                    console.log('[getConnectedUser] mashtag with id: ' + tagId + ' revived for user: ' + connectedUser.get('name'));
+                }
+                catch(err) {
+                    console.log('[getConnectedUser] Failed to revive mashtag with key ' + rKey + ' with id ' + tagId + ' with err ' + err);
+                }
+            });
+
+            console.log('[getConnectedUser] Revived ' + nodeChatModel.chats.length + ' chats');
+            }
+            else {
+                console.log('[getConnectedUser] No data returned for key: ' + rKey);
+            }
         });
 
         //Count multiple connections in case someone has a window open
@@ -291,6 +354,12 @@ function getConnectedUser(data, client) {
                 else {
                     console.log('Removing user from active pool: ' + connectedUser.get('name'));
                     connectedUser.currentConnections = 0;
+
+                    connectedUser.followedMashTags.forEach(function(t) {
+                        console.log('Unsubscribping user: ' + connectedUser.get('name') + ' from mashtag: ' + t.get('name'));
+                        t.watchingUsers.remove(connectedUser);
+                    });
+
                     var sUser = new models.User({name:connectedUser.get('name')});
                     socket.broadcast({
                         event: 'user:remove',
@@ -304,6 +373,7 @@ function getConnectedUser(data, client) {
     } 
     //Looks like the user has a new session for some reason. try and deal with this
     else if (!_.any(connectedUser.clientList, function(c) { return c == client; })) {
+        console.log('[getConnectedUser] existing user: ' + connectedUser.get('name') + ' on new client: ' + client.sessionId);
         connectedUser.currentConnections++;
         connectedUser.clientList.push(client);
 
@@ -402,8 +472,10 @@ function message(client, socket, msg){
 
                         //If we have hashes, deal with them
                         var shouldBroadcast = handleDirects(chat, connectedUser); 
-                        checkForMashTagUnSub(chat, connectedUser); 
-                        handleMashTags(chat, connectedUser); 
+                        shouldBroadcast = shouldBroadcast && checkForMashTagUnSub(chat, connectedUser); 
+
+                        if(shouldBroadcast)
+                            shouldBroadcast = shouldBroadcast && handleMashTags(chat, connectedUser); 
 
                         if (shouldBroadcast)
                             broadcastChat(chat,client);
@@ -488,7 +560,7 @@ function handleMashTags(chat, user) {
         var alreadyNotifiedUsers = new Array(); //Make sure we only send a multi-tagged chat once
 
         for (var t in mashTags) {
-            var foundTag = nodeChatModel.mashTags.find(function(tag){return tag.get('name') == mashTags[t];});
+            var foundTag = nodeChatModel.globalMashTags.find(function(tag){return tag.get('name') == mashTags[t];});
 
             //Create a new mashTag if we need to
             if (!foundTag) {
@@ -498,18 +570,13 @@ function handleMashTags(chat, user) {
 
                         //Add the tag to the global list, the users list (since they submitted it), and the chat message. Then add subcribe the user
                         //to the mash tag.
-                        nodeChatModel.mashTags.add(foundTag);
-                        user.followedMashTags.add(foundTag);
+                        nodeChatModel.globalMashTags.add(foundTag);
                         foundTag.watchingUsers.add(user);
-                        foundTag.mashes.add(chat);
 
-                        //Send the tag back to the user
-                        _.each(user.clientList, function(client) { 
-                            client.send({
-                                event: 'mashtag',
-                                data: foundTag.xport({recurse: false})
-                            });
-                        });
+                        addMashTagToStore(foundTag);
+                        sendMashTagsToUser(user, foundTag);
+                        broadcastGlobalMashTag(foundTag);
+                        saveMashtagForUser(user, foundTag);
 
                         notifySubscribedMashTagUsers(chat,foundTag, alreadyNotifiedUsers);
                     });
@@ -517,30 +584,92 @@ function handleMashTags(chat, user) {
                 createTag(mashTags[t]);
             } 
             else {
-                //In the case the tag exists, check to see if the submitting user has it
-                if(!user.followedMashTags.some(function(t) { return t == foundTag; }))
-                {
-                    user.followedMashTags.add(foundTag);
-
-                    _.each(user.clientList, function(client) { 
-                        client.send({
-                            event: 'mashtag',
-                            data: foundTag.xport({recurse: false})
-                        });
-                    });
-                }
-
-                if(!foundTag.watchingUsers.some(function(u) { return u == user; })) 
+                //In the case the tag exists, check to see if the submitting user is watching it
+                if(!foundTag.watchingUsers.some(function(u) { return u == user; })) { 
                     foundTag.watchingUsers.add(user);
 
-                if(!foundTag.mashes.some(function(m) { return m == chat; })) 
-                    foundTag.mashes.add(chat);
+                    sendMashTagsToUser(user, foundTag);
+                    saveMashtagForUser(user, foundTag);
+                }
 
                 //Notify all the subscribed users
-                notifySubscribedMashTagUsers(chat,foundTag, alreadyNotifiedUsers);
+                notifySubscribedMashTagUsers(chat, foundTag, alreadyNotifiedUsers);
             }
         }
+
+        return false;
     }
+    else {
+        return true;
+    }
+}
+
+function addMashTagToStore(mashTag) {
+    if(!mashTag) {
+        console.log('[addMashTagToStore] called without valid tag.');
+        return;
+    }
+
+    var rKey = 'mashtags';
+
+    rc.sadd(rKey, mashTag.xport({recurse: false}), function(err,data) {
+        if (err) console.log('[addMashTagToStore] SADD failed for key: ' + rKey + ' and value: ');
+        else console.log('[addMashTagToStore] SADD succeeded for key: ' + rKey + ' and value: '); 
+    });
+}
+
+//Helper function to persist a tag subscription for a user
+function saveMashtagForUser(user, mashTag) {
+    if(!mashTag) {
+        console.log('[saveMashtagForUser] called without valid tag.');
+        return;
+    }
+
+    var rKey = 'user:' + user.get('name') + '.mashtags';
+
+    rc.sismember(rKey, mashTag.id, function(err, data) {
+        if (err) console.log('SISMEMBER failed for key: ' + rKey + ' and value: ' + mashTag.id);
+        else if (data == '0') {
+            rc.sadd(rKey, mashTag.id, function(err, data) {
+                if (err) console.log('SADD failed for key: ' + rKey + ' and value: ' + mashTag.id);
+                else console.log('SADD succeeded for key: ' + rKey + ' and value: ' + mashTag.id);
+            });
+        }
+        else if (data == '1') {
+            console.log('Value: ' + mashTag.id + ' already exists for key: '+ rKey);
+        }
+    });
+}
+
+//Helper function to remove tag subscription for a user
+function deleteMashtagForUser(user, mashTag) {
+    var rKey = 'user:' + user.get('name') + '.mashtags';
+
+    rc.srem(rKey, mashTag.id, function(err, data) {
+        if (err) console.log('SREM failed for key: ' + rKey + ' and value: ' + mashTag.id);
+        else if (data == '1')
+            console.log('SREM succeeded for key: ' + rKey + ' and value: ' + mashTag.id);
+        else 
+            console.log('SREM could not find value for key: ' + rKey + ' and value: ' + mashTag.id);
+    });
+}
+
+//Helper function to send tags to a user
+function broadcastGlobalMashTag(mashTag) {
+    socket.broadcast({
+        event: 'globalmashtag',
+        data: mashTag.xport({recurse: false})
+    });
+}
+
+//Helper function to send tags to a user
+function sendMashTagsToUser(user, mashTag) {
+    _.each(user.clientList, function(client) { 
+        client.send({
+            event: 'mashtag',
+            data: mashTag.xport({recurse: false})
+        });
+    });
 }
 
 //Look for unsubscription notifications
@@ -548,14 +677,17 @@ function checkForMashTagUnSub(chat, user) {
     var mashTagsToRemove = mashlib.getChunksFromString(chat.get('text'), '-');
     if(mashTagsToRemove.length > 0) {
         for (var t in mashTagsToRemove) {
-            var foundTag = nodeChatModel.mashTags.find(function(tag){return tag.get('name') == mashTagsToRemove[t];});
+            var foundTag = nodeChatModel.globalMashTags.find(function(tag){return tag.get('name') == mashTagsToRemove[t];});
+
+            //Try and remove it from redis whether we found it or not, in case of sync issues
+            deleteMashtagForUser(user, mashTagsToRemove[t]);
 
             if (foundTag) {
-                user.followedMashTags.remove(foundTag);
                 foundTag.watchingUsers.remove(user);
 
                 //Notify client that tag was unsub'd
                 _.each(user.clientList, function(client) { 
+                   console.log('notified client ' + client.sessionId); 
                     client.send({
                         event: 'mashtag:delete',
                         data: foundTag.xport({recurse: false})
@@ -563,7 +695,10 @@ function checkForMashTagUnSub(chat, user) {
                 });
             }
         }
+        return false;
     }
+
+    return true;
 }
 
 //Send the chat to all currently subscribed users for a mashTag
@@ -571,8 +706,9 @@ function notifySubscribedMashTagUsers(chat, mashTag, doNotNotifyList){
     mashTag.watchingUsers.forEach(function(user){
         if (doNotNotifyList[user.get('name')]) return;
 
-        console.log('notifying ' + user.get('name') + ' for chat' + chat.xport());
+        console.log('[notifySubscribedMashTagUsers] notifying user: ' + user.get('name') + ' for chat: ' + chat.xport());
         _.each(user.clientList, function(client) { 
+            console.log('[notifySubscribedMashTagUsers] client send for user: ' + user.get('name') + ' for client: ' + client.sessionId);
             client.send({
                 event: 'mash',
                 data: chat.xport()
