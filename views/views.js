@@ -267,8 +267,44 @@ var NodeChatView = Backbone.View.extend({
                 inputField.val(current);
             }
         }
-//        if(key.keyCode == 9)
-            //alert('tab caught');
+        if(key.keyCode == 9) {
+            key.preventDefault();
+
+            var inputField = $('input[name=message]');
+            if(inputField.length > 0) {
+                var currentText = inputField.val();
+
+                var lastAT = currentText.lastIndexOf('@');
+                var lastMT = currentText.lastIndexOf('#');
+                var lastSpace = currentText.lastIndexOf(' ');
+
+                //If we have a @ to handle
+                if (lastAT > -1 && lastAT > lastMT && lastAT > lastSpace) {
+                    var chunk = mashlib.getChunksFromString(currentText, '@', lastAT);
+
+                    var match = this.model.users.find(function(u) {
+                        return (u.get('name').indexOf(chunk) != -1);
+                    });
+
+                    if(match)
+                        inputField.val(currentText.substring(0, lastAT+1) + match.get('name'));
+
+                }
+                //Of if we have a # to handle
+                else if(lastMT > -1 && lastMT > lastSpace)
+                {
+                    var chunk = mashlib.getChunksFromString(currentText, '#', lastMT);
+
+                    var match = this.model.mashTags.find(function(t) {
+                        return (t.get('name').indexOf(chunk) != -1);
+                    });
+
+                    if(match)
+                        inputField.val(currentText.substring(0, lastMT+1) + match.get('name'));
+                }
+            }
+        }
+
     }
     , setConnected: function(connected) {
         if(connected)

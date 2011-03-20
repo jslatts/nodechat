@@ -11,5 +11,6 @@ TODO:
  - Persist/restore directs/mashtag subscriptions
  - Implement UX to display historical mashes
  - away messages
+ - security issue with dm mash spying
 
 -jslatts

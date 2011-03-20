@@ -10,6 +10,7 @@ var express = require('express')
     , mashlib = require('./lib/mashlib')
     , stylus = require('stylus')
     , fs = require('fs')
+    , http = require('http')
     , path = require('path');
 
 require('joose');
@@ -126,7 +127,8 @@ app.post('/login', function(req, res){
         req.session.cookie.maxAge = 100 * 24 * 60 * 60 * 1000; //Force longer cookie age
         req.session.cookie.httpOnly = false;
         req.session.user = user;
-        req.session.hash = Hash.sha512(user.pass);
+        if(user.pass)
+            req.session.hash = Hash.sha512(user.pass);
         console.log('Storing new hash for user ' + user.name + ': ' + req.session.hash);
         res.redirect('/');
       });
@@ -627,6 +629,14 @@ path.exists(config_file, function (exists) {
             if (err) console.log('Unlink failed for ./public/main.css: ' + err);
             else console.log('Unlinked ./public/main.css');
         });
+
+        var options = {
+          host: 'localhost',
+          port: port,
+          path: '/main.css'
+        }
+
+        http.get(options, function(res){console.log('GET main.css complete')});
     }
     else {
         console.log('config found. starting in server mode');
