@@ -2,9 +2,12 @@
 html(lang='en')
   head
     title nodechat
+    link(rel='stylesheet', href='/main.css')
     script(type='text/javascript', src='/lib/jquery-1.5.1.js')
     script(type='text/javascript', src='/lib/underscore.js')
     script(type='text/javascript', src='/lib/backbone.js')
+    script(type='text/javascript', src='/lib/mashlib.js')
+    script(type='text/javascript', src='/lib/ncutils.js')
     script(type='text/javascript', src='/socket.io/socket.io.js')
     script(type='text/javascript', src='/models/models.js')
     script(type='text/javascript', src='/controllers/controllers.js')
@@ -19,13 +22,13 @@ html(lang='en')
       }
 
       $(document).ready(function () { 
-        window.app = NodeChatController.init({port: !{locals.port}}); 
+        window.app = NodeChatController.init({port: !{locals.port}, hash: !{locals.hash}, userName: '!{locals.name}'}); 
         $('input:text:first:visible').focus();  
         
       });
   body
-    div(style='width:100%;float:left;clear:left')#content
-      div(style='float:right')#help
+    #content
+      #help
         p @user to send direct messages
           br
           | #mashtag to subscribe to a topic
@@ -33,35 +36,44 @@ html(lang='en')
           | -mashtag to unsubscribe 
           br
           a(href='/logout') logout
-      h1(style='margin-top:0px') nodechat
-      div(style='margin-top:0px;color:red;display:none;')#disconnectMessage 
+      h1 nodechat 
+      div#version v0.2.3
+
+      #disconnectMessage 
         | disconnected - trying to reconnect...
 
-      div(style='float:left;')
+      #status_box
         span#user_count 0
         | users online: 
-      div(style='float:left;margin-left:10px;')#user_list
-      p(style='float:left;clear:left;')
+      #user_list
+
+      p#logon_name
         label You are connected as: 
           = locals.name
 
-      div(style='float:left;width:100%')
-        div(style='width:40%; float:right; overflow:hidden; word-wrap: break-word;')
+      label#box_title Initial
+
+      #chat_box
+        #chat_list
+
+      #direct_box
+        #direct_chat_list
+
+      #mashtag_box
+        #mashtag_chat_list
+         
+      #message_box
+        form(method='post', action='#', onsubmit='return false')#message_form
           p
-            | Super Secret Chat Messages (@)
-            #direct_list
-          p
-            | Mashtags
-            div(style='float:left')#mashtag_list
-            div(style='float:left;clear:both')#mashtag_chat_list
-        div(style='width:40%;float:left;')#chat_list
-          p
-            | Fun Chat Messages
-        div(style='float:left;width:50%;clear:both;')
-          form(method='post', action='#', onsubmit='return false')#messageForm
-            p
-              label Message: 
-              br
-              input(type='text', name='message', size='100')#messageBox
-              input(type='submit', value='send')
+            input(type='text', name='message', size='240')#message_field
+            input(type='submit', value='send')#message_send_button
+
+      #global_mashtag_box
+        p(style='margin-top:0px')
+          | Global Mashtags
+        #global_mashtag_list
+        br
+        p Followed Mashtags
+        #mashtag_list
+
 

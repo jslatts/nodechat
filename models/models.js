@@ -20,7 +20,7 @@
     models.User = Backbone.Model.extend({
         initialize: function() {
             this.directs = new models.ChatCollection(); 
-            this.followedMashTags = new models.MashTagCollection();
+            this.followedMashTags = new models.MashChatCollection(); 
         }
     });
 
@@ -33,6 +33,7 @@
             this.mashes.comparator = chatComparator;
 
             this.mashTags = new models.MashTagCollection(); 
+            this.globalMashTags = new models.MashTagCollection(); 
             this.users = new models.UserCollection();
             this.directs = new models.ChatCollection();  
         }
@@ -42,7 +43,6 @@
     models.MashTagModel = Backbone.Model.extend({
         initialize: function() {
             this.watchingUsers = new models.UserCollection();
-            this.mashes = new models.ChatCollection();
         }
     });
 

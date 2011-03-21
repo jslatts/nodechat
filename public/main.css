@@ -1,0 +1,85 @@
+body {
+  font: 12px / 1.3 "Lucida Grande", Arial, sans-serif;
+}
+h1 {
+  margin-top: 0px;
+  float: left;
+}
+#version {
+  margin-top: 20px;
+  margin-left: 4px;
+  font-size: 7px;
+  float: left;
+}
+#content {
+  width: 100%;
+  float: left;
+  clear: left;
+}
+#user_list {
+  float: left;
+  margin-left: 10px;
+}
+#logon_name {
+  float: left;
+  clear: left;
+}
+#status_box {
+  float: left;
+  clear: left;
+}
+#box_title {
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+#chat_box,
+#direct_box,
+#mashtag_box,
+#message_box,
+#box_title {
+  float: left;
+  clear: left;
+  width: 100%;
+}
+#chat_box,
+#direct_box,
+#mashtag_box {
+  display: none;
+}
+#chat_list,
+#direct_chat_list,
+#mashtag_chat_list {
+  height: 400px;
+  overflow-y: scroll;
+  border: solid #808080 1px;
+  width: 100%;
+}
+#message_field {
+  width: 99%;
+  border: solid #808080 1px;
+}
+#message_send_button {
+  display: none;
+}
+#global_mashtag_box {
+  float: left;
+  width: 70%;
+}
+#global_mashtag_list {
+  float: left;
+}
+#mashtag_list {
+  float: left;
+}
+#disconnectMessage {
+  margin-top: 5px;
+  color: #f00;
+  display: none;
+}
+#help {
+  float: right;
+}
+form input {
+  padding: 5px;
+  border: 1px;
+}

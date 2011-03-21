@@ -6,9 +6,11 @@ Here it the roadmap for the next week or so. Any suggestions or bug fixes are we
 
 TODO:
 
- - Persist user tag preferences
+ - Total History
  - Persist/restore directs/mashtag subscriptions
  - Implement UX to display historical mashes
  - away messages
+ - security issue with dm mash spying
+ - hash passwords
 
 -jslatts

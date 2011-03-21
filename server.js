@@ -7,11 +7,22 @@ var express = require('express')
     , _ = require('underscore')._
     , Backbone = require('backbone')
     , models = require('./models/models')
+    , mashlib = require('./lib/mashlib')
+    , ncutils = require('./lib/ncutils')
+    , stylus = require('stylus')
+    , fs = require('fs')
+    , http = require('http')
     , path = require('path');
+
+require('joose');
+require('joosex-namespace-depended');
+require('hash');
+
 
 var redis = require('redis')
     , rc = redis.createClient()
     , redisStore = require('connect-redis');
+    //, redisStore = require('./connect-redis');
 
 rc.on('error', function(err) {
     console.log('Error ' + err);
@@ -21,15 +32,32 @@ redis.debug_mode = false;
 var dev_port = 8000;
 var server_port = 80;
 var config_file = '/home/node/nodechat_config';
- 
+
 //configure express 
 app.use(express.bodyParser());
 app.use(express.cookieParser());
-app.use(express.session({ store: new redisStore({maxAge: 24 * 60 * 60 * 1000}), secret: 'Secretly I am an elephant' }));
+app.use(express.session({ store: new redisStore(), secret: 'Secretly I am an elephant' }));
+app.use(express.static('./public'));
 
 app.set('view engine', 'jade');
 app.set('view options', {layout: false});
 
+//setup stylus
+function compile(str, path, fn) {
+  stylus(str)
+    .set('filename', path)
+    .set('compress', true)
+    .set('force', true)
+};
+
+
+app.use(stylus.middleware({
+    src: './views'
+  , dest: './public'
+}));
+
+
+//handle auth
 
 function authenticate(name, pass, fn) {
     console.log('Auth for ' + name + ' with password ' + pass);
@@ -69,11 +97,6 @@ function restrict(req, res, next) {
   }
 }
 
-function accessLogger(req, res, next) {
-  console.log('/restricted accessed by %s', req.session.user.name);
-  next();
-}
-
 //setup routes
 app.get('/logout', function(req, res){
   // destroy the user's session to log them out
@@ -84,12 +107,7 @@ app.get('/logout', function(req, res){
 });
 
 app.get('/login', function(req, res){
-console.log('sessionid: ' + req.session.sid);
-  if (req.session.user) {
-    req.session.success = 'Authenticated as ' + req.session.user.name
-      + ' click to <a href="/logout">logout</a>. '
-      + ' You may now access <a href="/restricted">/restricted</a>.';
-  }
+  console.log('GET /login');
   res.render('login');
 });
 
@@ -107,8 +125,15 @@ app.post('/login', function(req, res){
         // in the session store to be retrieved,
         // or in this case the entire user object
         console.log('regenerated session id ' + req.session.id);
+        req.session.cookie.maxAge = 100 * 24 * 60 * 60 * 1000; //Force longer cookie age
         req.session.cookie.httpOnly = false;
         req.session.user = user;
+        if(user.pass)
+            req.session.hash = Hash.sha512(user.pass);
+        else
+            req.session.hash = 'No Hash'; 
+
+        console.log('Storing new hash for user ' + user.name + ': ' + req.session.hash);
         res.redirect('/');
       });
     } else {
@@ -149,6 +174,28 @@ rc.lrange('chatentries', -1000, -1, function(err, data) {
     }
     else {
         console.log('No data returned for key');
+    }
+});
+
+
+rc.smembers('mashtags', function(err, data) {
+    if (err) { console.log('SMEMBERS for key mashtags failed with error: ' + err); }
+    else if (data) {
+        _.each(data, function(jsonMashTag) {
+            try {
+                var mashTag = new models.MashTagModel();
+                mashTag.mport(jsonMashTag);
+                nodeChatModel.globalMashTags.add(mashTag);
+            }
+            catch(err) {
+                console.log('Failed to revive mashTag ' + jsonMashTag + ' with err ' + err);
+            }
+        });
+
+        console.log('Revived ' + nodeChatModel.globalMashTags.length + ' mashtags');
+    }
+    else {
+        console.log('SMEMBERS for key mashtags returned no data');
     }
 });
 
@@ -210,8 +257,8 @@ topPoster.count = 0;
 topPoster.lettercount = 0;
 
 function sendInitialDataToClient(client) {
-    if (nodeChatModel.chats.length > 16)
-        var chatHistory = nodeChatModel.chats.rest(nodeChatModel.chats.length-16);
+    if (nodeChatModel.chats.length > 100)
+        var chatHistory = nodeChatModel.chats.rest(nodeChatModel.chats.length-100);
     else 
         var chatHistory = nodeChatModel.chats;
 
@@ -231,10 +278,20 @@ function sendInitialDataToClient(client) {
             data: chat.xport()
         });
     });
+
+    nodeChatModel.globalMashTags.forEach(function(mashTag) {
+        client.send({
+            event: 'globalmashtag',
+            data: mashTag.xport({recurse: false})
+        });
+    });
 }
 
 function getConnectedUser(data, client) {
-    if(!data || !data.user || !data.user.name) return;
+    if(!data || !data.user || !data.user.name) {
+        console.log('[getConnectedUser] called with null data, data.user or data.user.name');
+        return;
+    }
 
     cleanName = data.user.name.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -246,13 +303,47 @@ function getConnectedUser(data, client) {
         connectedUser.clientList.push(client);
 
         nodeChatModel.users.add(connectedUser);
-        console.log('new user: ' + connectedUser.get('name'));
+        console.log('[getConnectedUser] new user: ' + connectedUser.get('name') + ' on client: ' + client.sessionId);
     
         var sUser = new models.User({name:connectedUser.get('name')});
-        console.log('Connected User ' + sUser.xport({recurse: false}));
         client.broadcast({
             event: 'user:add',
             data: sUser.xport({recurse: false})
+        });
+
+
+        //Grab mashtag subscriptions for user
+        var rKey = 'user:' + connectedUser.get('name') + '.mashtags';
+        rc.smembers(rKey, function(err, data) {
+            if (err) console.log('Error retrieving ' + rKey + ': ' + err); 
+            else if (data) {
+                _.each(data, function(tagId) {
+                try {
+                    //Try and find the tag in the current active list
+                    mashTag = nodeChatModel.globalMashTags.get(tagId);
+
+                    //If not found, create it and add it to the global list
+                    if(!mashTag) {
+                       console.log('[getConnectedUser] tried to add invalid tag to user subscription');
+                       return;
+                    }
+                        
+                    mashTag.watchingUsers.add(connectedUser);
+                    sendMashTagsToUser(connectedUser, mashTag);
+                    connectedUser.followedMashTags.add(mashTag);
+
+                    console.log('[getConnectedUser] mashtag with id: ' + tagId + ' revived for user: ' + connectedUser.get('name'));
+                }
+                catch(err) {
+                    console.log('[getConnectedUser] Failed to revive mashtag with key ' + rKey + ' with id ' + tagId + ' with err ' + err);
+                }
+            });
+
+            console.log('[getConnectedUser] Revived ' + nodeChatModel.chats.length + ' chats');
+            }
+            else {
+                console.log('[getConnectedUser] No data returned for key: ' + rKey);
+            }
         });
 
         //Count multiple connections in case someone has a window open
@@ -267,6 +358,12 @@ function getConnectedUser(data, client) {
                 else {
                     console.log('Removing user from active pool: ' + connectedUser.get('name'));
                     connectedUser.currentConnections = 0;
+
+                    connectedUser.followedMashTags.forEach(function(t) {
+                        console.log('Unsubscribping user: ' + connectedUser.get('name') + ' from mashtag: ' + t.get('name'));
+                        t.watchingUsers.remove(connectedUser);
+                    });
+
                     var sUser = new models.User({name:connectedUser.get('name')});
                     socket.broadcast({
                         event: 'user:remove',
@@ -280,6 +377,7 @@ function getConnectedUser(data, client) {
     } 
     //Looks like the user has a new session for some reason. try and deal with this
     else if (!_.any(connectedUser.clientList, function(c) { return c == client; })) {
+        console.log('[getConnectedUser] existing user: ' + connectedUser.get('name') + ' on new client: ' + client.sessionId);
         connectedUser.currentConnections++;
         connectedUser.clientList.push(client);
 
@@ -312,18 +410,25 @@ function message(client, socket, msg){
     if(msg.rediskey) {
         console.log('received from client: ' + msg.rediskey);
     }
+    if(msg.event === 'clientauthrequest') {
+        console.log('clientauthrequest received with hash ' + msg.data);
+    }
     else {
         var chat = new models.ChatEntry();
         chat.mport(msg);
         client.connectSession(function(err, data) {
             if(err) {
-                console.log('Error on connectSession: ' + err);
+                disconnectAndRedirectClient(client,function() {
+                    console.log('[message] Error on connectSession: ' + err);
+                });
                 return;
             }
 
             var connectedUser = getConnectedUser(data, client);
             if(!connectedUser) {
-                console.log('Failed to connect user on message');
+                disconnectAndRedirectClient(client,function() {
+                    console.log('[message] connectedUser is null or empty');
+                });
                 return;
             }
 
@@ -362,17 +467,19 @@ function message(client, socket, msg){
                         topPoster.lettercount = 1;
                     }
 
-                    if(chat.get('text').length > 140)
+                    if(chat.get('text').length > 400)
                         return;
 
                     rc.incr('next.chatentry.id', function(err, newId) {
-                        chat.set({id: newId, time:getClockTime(), datetime: new Date().getTime()});
+                        chat.set({id: newId, time:ncutils.getClockTime(), datetime: new Date().getTime()});
                         console.log(chat.xport());
 
                         //If we have hashes, deal with them
                         var shouldBroadcast = handleDirects(chat, connectedUser); 
-                        checkForMashTagUnSub(chat, connectedUser); 
-                        handleMashTags(chat, connectedUser); 
+                        shouldBroadcast = shouldBroadcast && checkForMashTagUnSub(chat, connectedUser); 
+
+                        if(shouldBroadcast)
+                            shouldBroadcast = shouldBroadcast && handleMashTags(chat, connectedUser); 
 
                         if (shouldBroadcast)
                             broadcastChat(chat,client);
@@ -402,7 +509,7 @@ function handleDirects(chat, originalUser) {
 
     if(direct) {
         console.log('looking for direct targer user ' + direct);
-        var foundUser = nodeChatModel.users.find(function(user){return user.get('name') == direct;});
+        var foundUser = nodeChatModel.users.find(function(user){return user.get('name').toLowerCase() == direct;});
         
         console.log('found user is ' + foundUser);
         if (foundUser) {
@@ -437,7 +544,7 @@ function getDirectsFromString(chatText) {
     var direct = null;
     if(directIndex > -1) {
         var endPos = chatText.indexOf(' ', directIndex+1);
-        direct = chatText.substring(directIndex+1, endPos);
+        direct = chatText.substring(directIndex+1, endPos).toLowerCase();
         console.log('Found direct: ' + direct);
     }
 
@@ -452,12 +559,12 @@ function handleMashTags(chat, user) {
         return;
     }
 
-    var mashTags = getChunksFromString(chat.get('text'), '#');
+    var mashTags = mashlib.getChunksFromString(chat.get('text'), '#');
     if(mashTags.length > 0) {
         var alreadyNotifiedUsers = new Array(); //Make sure we only send a multi-tagged chat once
 
         for (var t in mashTags) {
-            var foundTag = nodeChatModel.mashTags.find(function(tag){return tag.get('name') == mashTags[t];});
+            var foundTag = nodeChatModel.globalMashTags.find(function(tag){return tag.get('name') == mashTags[t];});
 
             //Create a new mashTag if we need to
             if (!foundTag) {
@@ -467,18 +574,13 @@ function handleMashTags(chat, user) {
 
                         //Add the tag to the global list, the users list (since they submitted it), and the chat message. Then add subcribe the user
                         //to the mash tag.
-                        nodeChatModel.mashTags.add(foundTag);
-                        user.followedMashTags.add(foundTag);
+                        nodeChatModel.globalMashTags.add(foundTag);
                         foundTag.watchingUsers.add(user);
-                        foundTag.mashes.add(chat);
 
-                        //Send the tag back to the user
-                        _.each(user.clientList, function(client) { 
-                            client.send({
-                                event: 'mashtag',
-                                data: foundTag.xport({recurse: false})
-                            });
-                        });
+                        addMashTagToStore(foundTag);
+                        sendMashTagsToUser(user, foundTag);
+                        broadcastGlobalMashTag(foundTag);
+                        saveMashtagForUser(user, foundTag);
 
                         notifySubscribedMashTagUsers(chat,foundTag, alreadyNotifiedUsers);
                     });
@@ -486,45 +588,110 @@ function handleMashTags(chat, user) {
                 createTag(mashTags[t]);
             } 
             else {
-                //In the case the tag exists, check to see if the submitting user has it
-                if(!user.followedMashTags.some(function(t) { return t == foundTag; }))
-                {
-                    user.followedMashTags.add(foundTag);
-
-                    _.each(user.clientList, function(client) { 
-                        client.send({
-                            event: 'mashtag',
-                            data: foundTag.xport({recurse: false})
-                        });
-                    });
-                }
-
-                if(!foundTag.watchingUsers.some(function(u) { return u == user; })) 
+                //In the case the tag exists, check to see if the submitting user is watching it
+                if(!foundTag.watchingUsers.some(function(u) { return u == user; })) { 
                     foundTag.watchingUsers.add(user);
 
-                if(!foundTag.mashes.some(function(m) { return m == chat; })) 
-                    foundTag.mashes.add(chat);
+                    sendMashTagsToUser(user, foundTag);
+                    saveMashtagForUser(user, foundTag);
+                }
 
                 //Notify all the subscribed users
-                notifySubscribedMashTagUsers(chat,foundTag, alreadyNotifiedUsers);
+                notifySubscribedMashTagUsers(chat, foundTag, alreadyNotifiedUsers);
             }
         }
+
+        return false;
     }
+    else {
+        return true;
+    }
+}
+
+function addMashTagToStore(mashTag) {
+    if(!mashTag) {
+        console.log('[addMashTagToStore] called without valid tag.');
+        return;
+    }
+
+    var rKey = 'mashtags';
+
+    rc.sadd(rKey, mashTag.xport({recurse: false}), function(err,data) {
+        if (err) console.log('[addMashTagToStore] SADD failed for key: ' + rKey + ' and value: ');
+        else console.log('[addMashTagToStore] SADD succeeded for key: ' + rKey + ' and value: '); 
+    });
+}
+
+//Helper function to persist a tag subscription for a user
+function saveMashtagForUser(user, mashTag) {
+    if(!mashTag) {
+        console.log('[saveMashtagForUser] called without valid tag.');
+        return;
+    }
+
+    var rKey = 'user:' + user.get('name') + '.mashtags';
+
+    rc.sismember(rKey, mashTag.id, function(err, data) {
+        if (err) console.log('SISMEMBER failed for key: ' + rKey + ' and value: ' + mashTag.id);
+        else if (data == '0') {
+            rc.sadd(rKey, mashTag.id, function(err, data) {
+                if (err) console.log('SADD failed for key: ' + rKey + ' and value: ' + mashTag.id);
+                else console.log('SADD succeeded for key: ' + rKey + ' and value: ' + mashTag.id);
+            });
+        }
+        else if (data == '1') {
+            console.log('Value: ' + mashTag.id + ' already exists for key: '+ rKey);
+        }
+    });
+}
+
+//Helper function to remove tag subscription for a user
+function deleteMashtagForUser(user, mashTag) {
+    var rKey = 'user:' + user.get('name') + '.mashtags';
+
+    rc.srem(rKey, mashTag.id, function(err, data) {
+        if (err) console.log('SREM failed for key: ' + rKey + ' and value: ' + mashTag.id);
+        else if (data == '1')
+            console.log('SREM succeeded for key: ' + rKey + ' and value: ' + mashTag.id);
+        else 
+            console.log('SREM could not find value for key: ' + rKey + ' and value: ' + mashTag.id);
+    });
+}
+
+//Helper function to send tags to a user
+function broadcastGlobalMashTag(mashTag) {
+    socket.broadcast({
+        event: 'globalmashtag',
+        data: mashTag.xport({recurse: false})
+    });
+}
+
+//Helper function to send tags to a user
+function sendMashTagsToUser(user, mashTag) {
+    _.each(user.clientList, function(client) { 
+        client.send({
+            event: 'mashtag',
+            data: mashTag.xport({recurse: false})
+        });
+    });
 }
 
 //Look for unsubscription notifications
 function checkForMashTagUnSub(chat, user) {
-    var mashTagsToRemove = getChunksFromString(chat.get('text'), '-');
+    var mashTagsToRemove = mashlib.getChunksFromString(chat.get('text'), '-');
     if(mashTagsToRemove.length > 0) {
         for (var t in mashTagsToRemove) {
-            var foundTag = nodeChatModel.mashTags.find(function(tag){return tag.get('name') == mashTagsToRemove[t];});
+            var foundTag = nodeChatModel.globalMashTags.find(function(tag){return tag.get('name') == mashTagsToRemove[t];});
+
+            //Try and remove it from redis whether we found it or not, in case of sync issues
+            deleteMashtagForUser(user, mashTagsToRemove[t]);
 
             if (foundTag) {
-                user.followedMashTags.remove(foundTag);
                 foundTag.watchingUsers.remove(user);
 
                 //Notify client that tag was unsub'd
                 _.each(user.clientList, function(client) { 
+                   console.log('notified client ' + client.sessionId); 
                     client.send({
                         event: 'mashtag:delete',
                         data: foundTag.xport({recurse: false})
@@ -532,7 +699,10 @@ function checkForMashTagUnSub(chat, user) {
                 });
             }
         }
+        return false;
     }
+
+    return true;
 }
 
 //Send the chat to all currently subscribed users for a mashTag
@@ -540,8 +710,9 @@ function notifySubscribedMashTagUsers(chat, mashTag, doNotNotifyList){
     mashTag.watchingUsers.forEach(function(user){
         if (doNotNotifyList[user.get('name')]) return;
 
-        console.log('notifying ' + user.get('name') + ' for chat' + chat.xport());
+        console.log('[notifySubscribedMashTagUsers] notifying user: ' + user.get('name') + ' for chat: ' + chat.xport());
         _.each(user.clientList, function(client) { 
+            console.log('[notifySubscribedMashTagUsers] client send for user: ' + user.get('name') + ' for client: ' + client.sessionId);
             client.send({
                 event: 'mash',
                 data: chat.xport()
@@ -553,59 +724,11 @@ function notifySubscribedMashTagUsers(chat, mashTag, doNotNotifyList){
     });
 }
 
-//Returns chunks with the delimiter _stripped_
-function getChunksFromString(chatText, delimiter) {
-    var chunkIndex = chatText.indexOf(delimiter);
-    var chunks = new Array();
-    var startPos = 0;
-
-    while(startPos <= chatText.length && chunkIndex > -1) {
-
-        //Grab the tag and push it on the array
-        var endPos = chatText.indexOf(' ', chunkIndex+1);
-        chunks.push(chatText.substring(chunkIndex+1, endPos).toLowerCase());
-        
-        //Setup for the next one
-        startPos = endPos +1;
-        chunkIndex = chatText.indexOf(delimiter, startPos);
-    }
-    
-    if(chunks.length > 0)
-        console.log('Found chunks: ' + chunks + ' for delimiter: ' + delimiter);
-
-    return chunks;
-}
-
 //Handle client disconnect decrementing the count then running the continuation
 function clientDisconnect(client, next) {
     console.log('Client disconnecting: ' + client.sessionId);
 
     next();
-}
-
-
-//Helpers
-function getClockTime()
-{
-   var now    = new Date();
-   var hour   = now.getHours();
-   var minute = now.getMinutes();
-   var second = now.getSeconds();
-   var ap = "AM";
-   if (hour   > 11) { ap = "PM";             }
-   if (hour   > 12) { hour = hour - 12;      }
-   if (hour   == 0) { hour = 12;             }
-   if (hour   < 10) { hour   = "0" + hour;   }
-   if (minute < 10) { minute = "0" + minute; }
-   if (second < 10) { second = "0" + second; }
-   var timeString = hour +
-                    ':' +
-                    minute +
-                    ':' +
-                    second +
-                    " " +
-                    ap;
-   return timeString;
 }
 
 //Open a config file (currently empty) to see if we are on a server
@@ -615,6 +738,20 @@ path.exists(config_file, function (exists) {
         console.log('no config found. starting in local dev mode');
         app.listen(dev_port);
         var port = dev_port;
+
+        //Hack, delete the old css. For some reason the middleware is not recompiling
+        fs.unlink('./public/main.css', function(err) {
+            if (err) console.log('Unlink failed for ./public/main.css: ' + err);
+            else console.log('Unlinked ./public/main.css');
+        });
+
+        var options = {
+          host: 'localhost',
+          port: port,
+          path: '/main.css'
+        }
+
+        http.get(options, function(res){console.log('GET main.css complete')});
     }
     else {
         console.log('config found. starting in server mode');
@@ -626,7 +763,7 @@ path.exists(config_file, function (exists) {
 
     app.get('/', restrict, function(req, res){
         res.render('index', {
-            locals: { name: req.session.user.name, port: port }
+            locals: { name: req.session.user.name, port: port, hash: JSON.stringify(req.session.hash) }
         });
     });
 });
