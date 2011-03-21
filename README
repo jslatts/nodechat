@@ -4,6 +4,8 @@ Visit http://nodechat.no.de/ for a live demo of the latest version.
 
 Here it the roadmap for the next week or so. Any suggestions or bug fixes are welcome!
 
+**WARNING** - Current unstable branch is actually unstable. It will break auth for old users. Should work fine for new users.
+
 TODO:
 
  - Total History
