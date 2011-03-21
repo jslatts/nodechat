@@ -45,7 +45,6 @@ var StatusView = Backbone.View.extend({
     initialize: function(options) {
         _.bindAll(this, 'render');
         this.model.bind('all', this.render);
-        this.model.view = this;
     }
     , render: function() {
         var text = this.model.get('name');
@@ -53,9 +52,6 @@ var StatusView = Backbone.View.extend({
         var time = ncutils.getClockTime();
         $(this.el).html(time + ' - <em>' + text + ' ' + message + '</em>');
         return this;
-    }
-    , remove: function() {
-        $(this.el).remove();
     }
 });
 
