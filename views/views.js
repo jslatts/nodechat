@@ -41,6 +41,24 @@ var ChatView = Backbone.View.extend({
     }
 });
 
+var StatusView = Backbone.View.extend({
+    initialize: function(options) {
+        _.bindAll(this, 'render');
+        this.model.bind('all', this.render);
+        this.model.view = this;
+    }
+    , render: function() {
+        var text = this.model.get('name');
+        var message = this.model.get('status_message');
+        var time = ncutils.getClockTime();
+        $(this.el).html(time + ' - <em>' + text + ' ' + message + '</em>');
+        return this;
+    }
+    , remove: function() {
+        $(this.el).remove();
+    }
+});
+
 var MashView = Backbone.View.extend({
     tagName: 'div',
 
@@ -126,6 +144,12 @@ var NodeChatView = Backbone.View.extend({
         , 'keyup #message_form' : 'suggestAutoComplete'
     }
     , changeDisplayMode: function(mode, boxTitle) {
+        //If already in progress, try again in a second
+        if( $('#direct_box, #mashtag_box, #chat_box').is(":animated") ) {
+            setTimeout(changeDisplayMode(mode, boxTitle), 100);
+            return;
+        }
+
         boxTitle = boxTitle || 'undefined';
         if(boxTitle !== '@' + this.userName)
             $('#box_title').text(boxTitle);
@@ -135,27 +159,27 @@ var NodeChatView = Backbone.View.extend({
 
         switch(mode) {
             case 'main':
-                $('#direct_box').fadeOut( function() {
-                    $('#mashtag_box').fadeOut( function() {
-                        $('#chat_box').fadeIn();
+                $('#direct_box').fadeOut(100, function() {
+                    $('#mashtag_box').fadeOut(100, function() {
+                        $('#chat_box').fadeIn(100);
                         $('#chat_list')[0].scrollTop = $('#chat_list')[0].scrollHeight;
                         this.currentDisplayMode = 'main';
                     });
                 });
                 break;
             case 'mash':
-                $('#chat_box').fadeOut( function() {
-                    $('#direct_box').fadeOut( function() {
-                        $('#mashtag_box').fadeIn();
+                $('#chat_box').fadeOut(100, function() {
+                    $('#direct_box').fadeOut(100, function() {
+                        $('#mashtag_box').fadeIn(100);
                         $('#mashtag_list')[0].scrollTop = $('#mashtag_list')[0].scrollHeight;
                         this.currentDisplayMode = 'mash';
                     });
                 });
                 break;
             case 'direct':
-                $('#chat_box').fadeOut( function() {
-                    $('#mashtag_box').fadeOut( function() {
-                        $('#direct_box').fadeIn();
+                $('#chat_box').fadeOut(100, function() {
+                    $('#mashtag_box').fadeOut(100, function() {
+                        $('#direct_box').fadeIn(100);
                         $('#direct_chat_list')[0].scrollTop = $('#direct_chat_list')[0].scrollHeight;
                         this.currentDisplayMode = 'direct';
                     });
@@ -271,10 +295,20 @@ var NodeChatView = Backbone.View.extend({
         var view = new UserView({model: user});
         $('#user_list').append(view.render().el);
         $('#user_count').html(this.model.users.length + ' ');
+
+        user.set({status_message: 'has joined nodechat'});
+        var view = new StatusView({model: user});
+        $('#chat_list').append(view.render().el);
+        $('#chat_list')[0].scrollTop = $('#chat_list')[0].scrollHeight;
     }
     , removeUser: function(user) { 
         user.view.remove();
         $('#user_count').html(this.model.users.length + ' ');
+
+        user.set({status_message: 'has left nodechat'});
+        var view = new StatusView({model: user});
+        $('#chat_list').append(view.render().el);
+        $('#chat_list')[0].scrollTop = $('#chat_list')[0].scrollHeight;
     }
 
     , sendMessage: function(){

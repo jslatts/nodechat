@@ -8,6 +8,7 @@ var express = require('express')
     , Backbone = require('backbone')
     , models = require('./models/models')
     , mashlib = require('./lib/mashlib')
+    , ncutils = require('./lib/ncutils')
     , stylus = require('stylus')
     , fs = require('fs')
     , http = require('http')
@@ -470,7 +471,7 @@ function message(client, socket, msg){
                         return;
 
                     rc.incr('next.chatentry.id', function(err, newId) {
-                        chat.set({id: newId, time:getClockTime(), datetime: new Date().getTime()});
+                        chat.set({id: newId, time:ncutils.getClockTime(), datetime: new Date().getTime()});
                         console.log(chat.xport());
 
                         //If we have hashes, deal with them
@@ -728,31 +729,6 @@ function clientDisconnect(client, next) {
     console.log('Client disconnecting: ' + client.sessionId);
 
     next();
-}
-
-
-//Helpers
-function getClockTime()
-{
-   var now    = new Date();
-   var hour   = now.getHours();
-   var minute = now.getMinutes();
-   var second = now.getSeconds();
-   var ap = "AM";
-   if (hour   > 11) { ap = "PM";             }
-   if (hour   > 12) { hour = hour - 12;      }
-   if (hour   == 0) { hour = 12;             }
-   if (hour   < 10) { hour   = "0" + hour;   }
-   if (minute < 10) { minute = "0" + minute; }
-   if (second < 10) { second = "0" + second; }
-   var timeString = hour +
-                    ':' +
-                    minute +
-                    ':' +
-                    second +
-                    " " +
-                    ap;
-   return timeString;
 }
 
 //Open a config file (currently empty) to see if we are on a server

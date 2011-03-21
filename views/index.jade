@@ -7,6 +7,7 @@ html(lang='en')
     script(type='text/javascript', src='/lib/underscore.js')
     script(type='text/javascript', src='/lib/backbone.js')
     script(type='text/javascript', src='/lib/mashlib.js')
+    script(type='text/javascript', src='/lib/ncutils.js')
     script(type='text/javascript', src='/socket.io/socket.io.js')
     script(type='text/javascript', src='/models/models.js')
     script(type='text/javascript', src='/controllers/controllers.js')
@@ -36,7 +37,7 @@ html(lang='en')
           br
           a(href='/logout') logout
       h1 nodechat 
-      div#version v0.2.2
+      div#version v0.2.3
 
       #disconnectMessage 
         | disconnected - trying to reconnect...
