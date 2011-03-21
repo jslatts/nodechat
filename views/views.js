@@ -113,6 +113,7 @@ var NodeChatView = Backbone.View.extend({
         this.model.users.bind('add', this.addUser);
         this.model.users.bind('remove', this.removeUser);
         this.socket = options.socket;
+        this.userName = options.userName;
         this.chunkSizes = new Array();
         this.changeDisplayMode('main', '#main');
         that = this;
@@ -126,7 +127,8 @@ var NodeChatView = Backbone.View.extend({
     }
     , changeDisplayMode: function(mode, boxTitle) {
         boxTitle = boxTitle || 'undefined';
-        $('#box_title').text(boxTitle);
+        if(boxTitle !== '@' + this.userName)
+            $('#box_title').text(boxTitle);
 
         if (mode === this.currentDisplayMode) return;
 

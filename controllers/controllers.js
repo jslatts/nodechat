@@ -12,7 +12,7 @@ NodeChatController = {
 
 
         this.model = new models.NodeChatModel();
-        this.view = new NodeChatView({model: this.model, socket: this.socket, el: $('#content')});
+        this.view = new NodeChatView({model: this.model, socket: this.socket, el: $('#content'), userName: options.userName});
         var view = this.view;
         this.connected = false;
 
@@ -77,7 +77,7 @@ NodeChatController = {
                 break;
 
             case 'user:add':
-                log('user:add received: ' + message.data );
+                log('user add received: ' + message.data );
                 var user = new models.User();
                 user.mport(message.data);
 

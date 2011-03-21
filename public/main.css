@@ -55,11 +55,11 @@ h1 {
   width: 100%;
 }
 #message_field {
-  width: 95%;
+  width: 99%;
   border: solid #808080 1px;
 }
 #message_send_button {
-  margin-left: 10px;
+  display: none;
 }
 #global_mashtag_box {
   float: left;
