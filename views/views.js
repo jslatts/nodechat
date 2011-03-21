@@ -44,18 +44,15 @@ var ChatView = Backbone.View.extend({
 var StatusView = Backbone.View.extend({
     initialize: function(options) {
         _.bindAll(this, 'render');
-        this.model.bind('all', this.render);
-        this.model.view = this;
+        this.userName = options.userName;
+        this.statusMessage = options.statusMessage;
     }
     , render: function() {
-        var text = this.model.get('name');
-        var message = this.model.get('status_message');
+        var text = this.userName;
+        var message = this.statusMessage;
         var time = ncutils.getClockTime();
         $(this.el).html(time + ' - <em>' + text + ' ' + message + '</em>');
         return this;
-    }
-    , remove: function() {
-        $(this.el).remove();
     }
 });
 
@@ -296,8 +293,7 @@ var NodeChatView = Backbone.View.extend({
         $('#user_list').append(view.render().el);
         $('#user_count').html(this.model.users.length + ' ');
 
-        user.set({status_message: 'has joined nodechat'});
-        var view = new StatusView({model: user});
+        var view = new StatusView({userName: user.get('name'), statusMessage: 'has joined nodechat'});
         $('#chat_list').append(view.render().el);
         $('#chat_list')[0].scrollTop = $('#chat_list')[0].scrollHeight;
     }
@@ -305,8 +301,7 @@ var NodeChatView = Backbone.View.extend({
         user.view.remove();
         $('#user_count').html(this.model.users.length + ' ');
 
-        user.set({status_message: 'has left nodechat'});
-        var view = new StatusView({model: user});
+        var view = new StatusView({userName: user.get('name'), statusMessage: 'has left nodechat'});
         $('#chat_list').append(view.render().el);
         $('#chat_list')[0].scrollTop = $('#chat_list')[0].scrollHeight;
     }

@@ -82,7 +82,7 @@ NodeChatController = {
                 user.mport(message.data);
 
                 //In case of refresh/socket/whatever bugs, only add a user once
-                if(!this.model.users.some(function(u) { return u.get('name') == user.get('name'); }))
+                if(!this.model.users.some(function(u) { return u.get('name').toLowerCase() == user.get('name').toLowerCase(); }))
                     this.model.users.add(user);
                 break;
 
@@ -92,7 +92,7 @@ NodeChatController = {
                 sUser.mport(message.data);
 
                 //Because we don't have the actual model, find anything with the same name and remove it
-                var users = this.model.users.filter(function(u) { return u.get('name') == sUser.get('name'); });
+                var users = this.model.users.filter(function(u) { return u.get('name').toLowerCase() == sUser.get('name').toLowerCase(); });
                 this.model.users.remove(users);
                 break;
 
