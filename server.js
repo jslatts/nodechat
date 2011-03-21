@@ -60,29 +60,51 @@ app.use(stylus.middleware({
 //handle auth
 
 function authenticate(name, pass, fn) {
-    console.log('Auth for ' + name + ' with password ' + pass);
+    console.log('[authenticate] Starting auth for ' + name + ' with password ' + pass);
     
-    rc.get('user:' + name, function(err, data){
+    var rKey = 'user:' + name;
+    rc.get(rKey, function(err, data){
+        if(err) return fn(new Error('[authenticate] SET failed for key: ' + rKey + ' for value: ' + name));
+
+        var rKey = 'user:' + name;
         if (!data) {
-            rc.set('user:' + name, name, function(err, data){
-                rc.set('user:' + name + '.password', pass, function(err, data){
-                    var user = {};
-                    user.name = name;
-                    return fn(null, user);
-                });
-            });
-        }
+            console.log('[authenticate] user: ' + name + ' not found in store. Creating new user.');
+            rc.set(rKey, name, function(err, data){
+                if(err) return fn(new Error('[authenticate] SET failed for key: ' + rKey + ' for value: ' + name));
+
+                var salt = new Date().getTime();
+                rc.set(rKey + '.salt', salt, function(err, data) {
+                    if(err) return fn(new Error('[authenticate] SET failed for key: ' + rKey + '.salt' + ' for value: ' + salt));
+
+                    var hashpass = Hash.sha512(salt + '_' + pass);
+                    rc.set(rKey + '.hashpass', hashpass, function(err, data) {
+                        if(err) return fn(new Error('[authenticate] SET failed for key: ' + rKey + '.hashpass' + ' for value: ' + hashpass));
+
+                        var user = {};
+                        user.name = name;
+                        user.hashpass = hashpass;
+                        return fn(null, user);
+        }); }); }); }
         else {
+            console.log('[authenticate] user: ' + name + ' found in store. Verifying password.');
             var user = {};
             user.name = data;
-            rc.get('user:' + name + '.password', redis.print);
-            rc.get('user:' + name + '.password', function(err, data){
-                if (pass == data) {
-                    user.pass = pass;
-                    console.log('Auth succeeded for ' + name + ' with password ' + pass);
-                    return fn(null, user);
-                }
-                fn(new Error('invalid password'));
+
+            rc.get(rKey + '.salt', function(err, data){
+                if(err) return fn(new Error('[authenticate] GET failed for key: ' + rKey + '.salt')); 
+
+                var calculatedHash = Hash.sha512(data + '_' + pass);
+                rc.get(rKey + '.hashpass', function(err, data) {
+                    if(err) return fn(new Error('[authenticate] GET failed for key: ' + rKey + '.hashpass'));
+
+                    if (calculatedHash === data) {
+                        user.hashpass = calculatedHash;
+                        console.log('[authenticate] Auth succeeded for ' + name + ' with password ' + pass);
+                        return fn(null, user);
+                    }
+
+                    fn(new Error('invalid password'));
+                });
             });
         }
     });
@@ -128,10 +150,7 @@ app.post('/login', function(req, res){
         req.session.cookie.maxAge = 100 * 24 * 60 * 60 * 1000; //Force longer cookie age
         req.session.cookie.httpOnly = false;
         req.session.user = user;
-        if(user.pass)
-            req.session.hash = Hash.sha512(user.pass);
-        else
-            req.session.hash = 'No Hash'; 
+        req.session.hash = user.hashpass || 'No Hash';
 
         console.log('Storing new hash for user ' + user.name + ': ' + req.session.hash);
         res.redirect('/');

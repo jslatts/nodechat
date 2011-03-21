@@ -12,5 +12,7 @@ TODO:
  - away messages
  - security issue with dm mash spying
  - hash passwords
+ -- Handle old users
+ -- Handle hash auth
 
 -jslatts
