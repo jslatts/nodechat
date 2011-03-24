@@ -17,4 +17,18 @@ TODO:
  -- Handle old users
  -- Handle hash auth
 
+Horrible bugs:
+
+ - Dashes/@s in middle of words don't show up in chats
+ - user names with spaces can't be direct messaged
+
+
+            bug    
+   ,,,,,,,,,,,,,,,,,,,,,,,  \   /
+ / (  (  (  (  (  (  (  (  \( = =)
+<  (  (  (  (  (  (  (  (  / ( ^ )
+ \ (__(__(__(__(__(__(__(__)   ~
+   ^  ^  ^  ^  ^  ^  ^  ^  ^
+
+
 -jslatts

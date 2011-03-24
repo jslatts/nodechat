@@ -22,7 +22,6 @@ require('hash');
 var redis = require('redis')
     , rc = redis.createClient()
     , redisStore = require('connect-redis');
-    //, redisStore = require('./connect-redis');
 
 rc.on('error', function(err) {
     console.log('Error ' + err);
