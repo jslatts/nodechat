@@ -345,11 +345,11 @@ var NodeChatView = Backbone.View.extend({
     , suggestAutoComplete: function(key) {
         var inputField = $('input[name=message]');
 
-        if(inputField.val().length >= 1 && inputField.val()[0] == '#' ) {
-            var chunk = mashlib.getChunksFromString(inputField.val(), '#', 0, true)[0];
-            this.changeDisplayMode('mash', chunk);
-        }
-        else if(inputField.val().length >= 1 && inputField.val()[0] == '@' ) {
+//        if(inputField.val().length >= 1 && inputField.val()[0] == '#' ) {
+//            var chunk = mashlib.getChunksFromString(inputField.val(), '#', 0, true)[0];
+//            this.changeDisplayMode('mash', chunk);
+//        }
+        if(inputField.val().length >= 1 && inputField.val()[0] == '@' ) {
             var chunk = mashlib.getChunksFromString(inputField.val(), '@', 0, true)[0];
             this.changeDisplayMode('direct', chunk);
         } 
@@ -414,7 +414,7 @@ var NodeChatView = Backbone.View.extend({
 
                     if(match) {
                         inputField.val(currentText.substring(0, lastMT+1) + match.get('name') + ' ');
-                        this.changeDisplayMode('mash', '#' + match.get('name'));
+                        //this.changeDisplayMode('mash', '#' + match.get('name'));
                     }
                 }
             }

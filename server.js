@@ -2,7 +2,6 @@ var express = require('express')
     , app = express.createServer()
     , connect = require('connect')
     , jade = require('jade')
-    //, socket = require('socket.io').listen(app, {transports: ['websocket', 'htmlfile', 'xhr-multipart', 'xhr-polling','jsonp-polling']})
     , socket = require('socket.io').listen(app)
     , _ = require('underscore')._
     , Backbone = require('backbone')
@@ -557,7 +556,10 @@ function handleDirects(chat, originalUser) {
 }
 
 function getDirectsFromString(chatText) {
-    var directIndex = chatText.indexOf('@');
+    if(chatText[0] === '@')
+        var directIndex = 0;
+    else
+        var directIndex = chatText.indexOf(' @');
 
     var direct = null;
     if(directIndex > -1) {
@@ -619,7 +621,7 @@ function handleMashTags(chat, user) {
             }
         }
 
-        return false;
+        return true;
     }
     else {
         return true;
