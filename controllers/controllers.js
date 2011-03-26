@@ -3,7 +3,11 @@
 //
 NodeChatController = {
     init: function(options) {
-        this.socket = new io.Socket(null, {port: options.port});
+        this.socket = new io.Socket(null, {port: options.port
+            , transports: ['websocket', 'flashsocket', 'xhr-multipart', 'htmlfile']
+            , rememberTransport: false
+            , tryTransportsOnConnectTimeout: false
+        });
         var mySocket = this.socket;
 
         this.hash = options.hash;

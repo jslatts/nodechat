@@ -2,7 +2,6 @@ var express = require('express')
     , app = express.createServer()
     , connect = require('connect')
     , jade = require('jade')
-    //, socket = require('socket.io').listen(app, {transports: ['websocket', 'htmlfile', 'xhr-multipart', 'xhr-polling','jsonp-polling']})
     , socket = require('socket.io').listen(app)
     , _ = require('underscore')._
     , Backbone = require('backbone')
@@ -22,7 +21,6 @@ require('hash');
 var redis = require('redis')
     , rc = redis.createClient()
     , redisStore = require('connect-redis');
-    //, redisStore = require('./connect-redis');
 
 rc.on('error', function(err) {
     console.log('Error ' + err);
