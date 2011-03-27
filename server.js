@@ -1,188 +1,173 @@
-var express = require('express')
-    , app = express.createServer()
-    , connect = require('connect')
-    , jade = require('jade')
-    , socket = require('socket.io').listen(app)
-    , _ = require('underscore')._
-    , Backbone = require('backbone')
-    , models = require('./models/models')
-    , mashlib = require('./lib/mashlib')
-    , ncutils = require('./lib/ncutils')
-    , stylus = require('stylus')
-    , fs = require('fs')
-    , http = require('http')
-    , path = require('path');
+/*!
+ * nodechat.js
+ * Copyright(c) 2011 Justin Slattery <justin.slattery@fzysqr.com> 
+ * MIT Licensed
+ */
 
-require('joose');
-require('joosex-namespace-depended');
-require('hash');
-
-
-var redis = require('redis')
-    , rc = redis.createClient()
-    , redisStore = require('connect-redis');
-
-rc.on('error', function(err) {
-    console.log('Error ' + err);
-});
-
-redis.debug_mode = false;
+/*
+ * Global settings
+ */ 
 var dev_port = 8000;
 var server_port = 80;
 var config_file = '/home/node/nodechat_config';
 
-//configure express 
-app.use(express.bodyParser());
-app.use(express.cookieParser());
-app.use(express.session({ store: new redisStore(), secret: 'Secretly I am an elephant' }));
-app.use(express.static('./public'));
+/*
+ * Include core dependencies.  
+ */
+var _ = require('underscore')._
+    , Backbone = require('backbone')
+    , fs = require('fs')
+    , http = require('http')
+    , path = require('path');
+
+/*
+ * Include our own modules
+ */
+var models = require('./models/models')
+    , auth = require('./lib/auth')
+    , mashlib = require('./lib/mashlib')
+    , ncutils = require('./lib/ncutils');
+
+/*
+ * Require redis and setup the client 
+ */
+var redis = require('redis')
+    , rc = redis.createClient();
+
+redis.debug_mode = false;
+
+rc.on('error', function (err) {
+    console.log('Error ' + err);
+});
+
+/*
+ * Setup connect, express, socket, and the connect-redis session store
+ */
+var express = require('express')
+    , app = express.createServer()
+    , connect = require('connect')
+    , jade = require('jade')
+    , stylus = require('stylus')
+    , socket = require('socket.io').listen(app)
+    , RedisStore = require('connect-redis');
 
 app.set('view engine', 'jade');
 app.set('view options', {layout: false});
-
-//setup stylus
-function compile(str, path, fn) {
-  stylus(str)
-    .set('filename', path)
-    .set('compress', true)
-    .set('force', true)
-};
-
-
+app.use(express.bodyParser());
+app.use(express.cookieParser());
+app.use(express.session({ store: new RedisStore(), secret: 'Secretly I am an elephant' }));
+app.use(express.static('./public'));
 app.use(stylus.middleware({
     src: './views'
   , dest: './public'
 }));
 
-
-//handle auth
-
-function authenticate(name, pass, fn) {
-    console.log('[authenticate] Starting auth for ' + name + ' with password ' + pass);
-    
-    var rKey = 'user:' + name;
-    rc.get(rKey, function(err, data){
-        if(err) return fn(new Error('[authenticate] SET failed for key: ' + rKey + ' for value: ' + name));
-
-        var rKey = 'user:' + name;
-        if (!data) {
-            console.log('[authenticate] user: ' + name + ' not found in store. Creating new user.');
-            rc.set(rKey, name, function(err, data){
-                if(err) return fn(new Error('[authenticate] SET failed for key: ' + rKey + ' for value: ' + name));
-
-                var salt = new Date().getTime();
-                rc.set(rKey + '.salt', salt, function(err, data) {
-                    if(err) return fn(new Error('[authenticate] SET failed for key: ' + rKey + '.salt' + ' for value: ' + salt));
-
-                    var hashpass = Hash.sha512(salt + '_' + pass);
-                    rc.set(rKey + '.hashpass', hashpass, function(err, data) {
-                        if(err) return fn(new Error('[authenticate] SET failed for key: ' + rKey + '.hashpass' + ' for value: ' + hashpass));
-
-                        var user = {};
-                        user.name = name;
-                        user.hashpass = hashpass;
-                        return fn(null, user);
-        }); }); }); }
-        else {
-            console.log('[authenticate] user: ' + name + ' found in store. Verifying password.');
-            var user = {};
-            user.name = data;
-
-            rc.get(rKey + '.salt', function(err, data){
-                if(err) return fn(new Error('[authenticate] GET failed for key: ' + rKey + '.salt')); 
-
-                var calculatedHash = Hash.sha512(data + '_' + pass);
-                rc.get(rKey + '.hashpass', function(err, data) {
-                    if(err) return fn(new Error('[authenticate] GET failed for key: ' + rKey + '.hashpass'));
-
-                    if (calculatedHash === data) {
-                        user.hashpass = calculatedHash;
-                        console.log('[authenticate] Auth succeeded for ' + name + ' with password ' + pass);
-                        return fn(null, user);
-                    }
-
-                    fn(new Error('invalid password'));
-                });
-            });
-        }
-    });
+//setup stylus
+function compile(str, path, fn) {
+    stylus(str)
+        .set('filename', path)
+        .set('compress', true)
+        .set('force', true);
 }
 
+
+/*
+ *  Middleware that decides what a valid login looks like. In this case, just verify that we have a session object for the user.
+ *
+ *  This is an express [route middleware](http://expressjs.com/guide.html#route-middleware). Control is passed to the middleware function before the route function is called. We use restrictAccess() to verify that we have a valid user key in the session, implying that authentication has succeeded, before we send the client to the index.jade template. If we do not have a valid user in the session, then we redirect to the '/login' route. This effectively locks down our '/' route from unauthenticated access. You could add the restrictAccess() all to any route you want to protect.
+ */
 function restrict(req, res, next) {
-  if (req.session.user) {
-    next();
-  } else {
-    req.session.error = 'Access denied!';
-    res.redirect('/login');
-  }
+    if (req.session.user) {
+        next();
+    } else {
+        req.session.error = 'Access denied!';
+        res.redirect('/login');
+    }
 }
 
-//setup routes
-app.get('/logout', function(req, res){
-  // destroy the user's session to log them out
-  // will be re-created next request
-  req.session.destroy(function(){
-    res.redirect('home');
-  });
+/*
+ *  Tell connect to destory the session.
+ */
+app.get('/logout', function (req, res) {
+    // destroy the user's session to log them out
+    // will be re-created next request
+    req.session.destroy(function () {
+        res.redirect('home');
+    });
 });
 
-app.get('/login', function(req, res){
-  console.log('GET /login');
-  res.render('login');
-});
 
-app.get('/disconnect', function(req, res){
+app.get('/disconnect', function (req, res) {
     res.render('disconnect');
 });
 
-app.post('/login', function(req, res){
-  authenticate(req.body.username, req.body.password, function(err, user){
-    if (user) {
-      // Regenerate session when signing in
-      // to prevent fixation 
-      req.session.regenerate(function(){
-        // Store the user's primary key 
-        // in the session store to be retrieved,
-        // or in this case the entire user object
-        console.log('regenerated session id ' + req.session.id);
-        req.session.cookie.maxAge = 100 * 24 * 60 * 60 * 1000; //Force longer cookie age
-        req.session.cookie.httpOnly = false;
-        req.session.user = user;
-        req.session.hash = user.hashpass || 'No Hash';
-
-        console.log('Storing new hash for user ' + user.name + ': ' + req.session.hash);
-        res.redirect('/');
-      });
-    } else {
-      req.session.error = 'Authentication failed, please check your '
-        + ' username and password.';
-      res.redirect('back');
-    }
-  });
+/*
+ * Route: GET /login
+ *
+ * Template: login.jade 
+ */
+app.get('/login', function (req, res) {
+    console.log('GET /login');
+    res.render('login');
 });
 
-app.get('/*.(js|css|swf)', function(req, res){
-    res.sendfile('./'+req.url);
+/*
+ * Route: POST /login
+ *
+ * Calls the authentication module to verify login details. Failures are redirected back to the login page.
+ *
+ * If the authentication module gives us a user object back, we ask connect to regenerate the session and send the client back to index. Note: we specify a _long_ cookie age so users won't have to log in frequently. We also set the httpOnly flag to false (I know, not so secure) to make the cookie available over [Flash Sockets](http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/net/Socket.html).
+ */ 
+app.post('/login', function (req, res) {
+    auth.authenticate(req.body.username, req.body.password, function (err, user) {
+        if (user) {
+            // Regenerate session when signing in
+            // to prevent fixation 
+            req.session.regenerate(function () {
+                // Store the user's primary key 
+                // in the session store to be retrieved,
+                // or in this case the entire user object
+                console.log('regenerated session id ' + req.session.id);
+                req.session.cookie.maxAge = 100 * 24 * 60 * 60 * 1000; //Force longer cookie age
+                req.session.cookie.httpOnly = false;
+                req.session.user = user;
+                req.session.hash = user.hashpass || 'No Hash';
+
+                console.log('Storing new hash for user ' + user.name + ': ' + req.session.hash);
+                res.redirect('/');
+            });
+        } else {
+            req.session.error = 'Authentication failed, please check your username and password.';
+            res.redirect('back');
+        }
+    });
 });
 
-
+/*
+ * Serve up any static file requested by the client
+ *
+ * TODO: should restrict this to only server *public* routes.
+ */
+app.get('/*.(js|css)', function (req, res) {
+    res.sendfile('./' + req.url);
+});
 
 //create local state
 var nodeChatModel = new models.NodeChatModel();
 
-rc.lrange('chatentries', -1000, -1, function(err, data) {
+rc.lrange('chatentries', -1000, -1, function (err, data) {
     if (err)
     {
         console.log('Error: ' + err);
     }
     else if (data) {
-        _.each(data, function(jsonChat) {
+        _.each(data, function (jsonChat) {
             try {
                 var chat = new models.ChatEntry();
                 chat.mport(jsonChat);
                 nodeChatModel.chats.add(chat);
             }
-            catch(err) {
+            catch (err) {
                 console.log('Failed to revive chat ' + jsonChat + ' with err ' + err);
             }
         });
@@ -195,16 +180,18 @@ rc.lrange('chatentries', -1000, -1, function(err, data) {
 });
 
 
-rc.smembers('mashtags', function(err, data) {
-    if (err) { console.log('SMEMBERS for key mashtags failed with error: ' + err); }
+rc.smembers('mashtags', function (err, data) {
+    if (err) { 
+        console.log('SMEMBERS for key mashtags failed with error: ' + err); 
+    }
     else if (data) {
-        _.each(data, function(jsonMashTag) {
+        _.each(data, function (jsonMashTag) {
             try {
                 var mashTag = new models.MashTagModel();
                 mashTag.mport(jsonMashTag);
                 nodeChatModel.globalMashTags.add(mashTag);
             }
-            catch(err) {
+            catch (err) {
                 console.log('Failed to revive mashTag ' + jsonMashTag + ' with err ' + err);
             }
         });
@@ -216,6 +203,12 @@ rc.smembers('mashtags', function(err, data) {
     }
 });
 
+/*
+ * When we have a client that shouldn't be connected, __kick 'em off!__' 
+ * 
+ * @param {object} client
+ * @param {function} fn
+ */
 function disconnectAndRedirectClient(client, fn) {
     console.log('Disconnecting unauthenticated user');
     client.send({ event: 'disconnect' });
@@ -224,42 +217,51 @@ function disconnectAndRedirectClient(client, fn) {
     return;
 }
 
-socket.on('connection', function(client){
+/*
+ * Handle the new connection event for socket. 
+ * 
+ * connectSession() is a helper method that will verify a client's validity by checking for a cookie in the request header, then, if we find it,  _pulling their session out of redis_. 
+ *
+ * We then use the helper method in the 'connection' handler for our socket listener. Instead accepting any user connection, we are going to check that the client has a valid session (meaning they logged in). If they don't, give them the boot! If they do, then we store a copy of the session data (yay we have access!) in the client object and then setup the rest of the socket events. Finally, send them a welcome message just to prove that we remembered their profile. 
+ */
+socket.on('connection', function (client) {
     // helper function that goes inside your socket connection
-    client.connectSession = function(fn) {
+    client.connectSession = function (fn) {
         if (!client.request || !client.request.headers || !client.request.headers.cookie) {
-            disconnectAndRedirectClient(client,function() {
-               console.log('Null request/header/cookie!');
+            disconnectAndRedirectClient(client, function () {
+                console.log('Null request/header/cookie!');
             });
             return;
         }
 
         console.log('Cookie is' + client.request.headers.cookie);
 
-        var match = client.request.headers.cookie.match(/connect\.sid=([^;]+)/);
+        var match, sid;
+
+        match = client.request.headers.cookie.match(/connect\.sid=([^;]+)/);
         if (!match || match.length < 2) {
-            disconnectAndRedirectClient(client,function() {
-                console.log('Failed to find connect.sid in cookie')
+            disconnectAndRedirectClient(client, function () {
+                console.log('Failed to find connect.sid in cookie');
             });
             return;
         }
 
-        var sid = unescape(match[1]);
+        sid = unescape(match[1]);
 
-        rc.get(sid, function(err, data) {
+        rc.get(sid, function (err, data) {
             fn(err, JSON.parse(data));
         });
     };
 
-    client.connectSession(function(err, data) {
-        if(err) {
+    client.connectSession(function (err, data) {
+        if (err) {
             console.log('Error on connectionSession: ' + err);
             return;
         }
 
         var connectedUser = getConnectedUser(data, client);
         if(connectedUser) {
-            client.on('message', function(msg){message(client, socket, msg)});
+            client.on('message', function (msg) {message(client, socket, msg)});
 
             sendInitialDataToClient(client);
         }
@@ -281,7 +283,7 @@ function sendInitialDataToClient(client) {
 
     console.log('sending ' + chatHistory.length);
 
-    nodeChatModel.users.forEach(function(user) {
+    nodeChatModel.users.forEach(function (user) {
         var sUser = new models.User({name:user.get('name')});
         client.send({
             event: 'user:add',
@@ -289,14 +291,14 @@ function sendInitialDataToClient(client) {
         });
     });
 
-    chatHistory.forEach(function(chat) {
+    chatHistory.forEach(function (chat) {
         client.send({
             event: 'chat',
             data: chat.xport()
         });
     });
 
-    nodeChatModel.globalMashTags.forEach(function(mashTag) {
+    nodeChatModel.globalMashTags.forEach(function (mashTag) {
         client.send({
             event: 'globalmashtag',
             data: mashTag.xport({recurse: false})
@@ -312,7 +314,7 @@ function getConnectedUser(data, client) {
 
     cleanName = data.user.name.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-    var connectedUser = nodeChatModel.users.find(function(user){return user.get('name') == cleanName;});
+    var connectedUser = nodeChatModel.users.find(function (user) {return user.get('name') == cleanName;});
 
     if(!connectedUser) {
         connectedUser = new models.User({'client': client, 'name': cleanName});
@@ -331,10 +333,10 @@ function getConnectedUser(data, client) {
 
         //Grab mashtag subscriptions for user
         var rKey = 'user:' + connectedUser.get('name') + '.mashtags';
-        rc.smembers(rKey, function(err, data) {
+        rc.smembers(rKey, function (err, data) {
             if (err) console.log('Error retrieving ' + rKey + ': ' + err); 
             else if (data) {
-                _.each(data, function(tagId) {
+                _.each(data, function (tagId) {
                 try {
                     //Try and find the tag in the current active list
                     mashTag = nodeChatModel.globalMashTags.get(tagId);
@@ -367,8 +369,8 @@ function getConnectedUser(data, client) {
         connectedUser.currentConnections = 1;
 
         //Set disconnect here so we can destroy the user model
-        client.on('disconnect', function(){ 
-            clientDisconnect(client, function() {
+        client.on('disconnect', function () { 
+            clientDisconnect(client, function () {
                 if(connectedUser.currentConnections > 1) {
                     connectedUser.currentConnections--;
                 }
@@ -376,7 +378,7 @@ function getConnectedUser(data, client) {
                     console.log('Removing user from active pool: ' + connectedUser.get('name'));
                     connectedUser.currentConnections = 0;
 
-                    connectedUser.followedMashTags.forEach(function(t) {
+                    connectedUser.followedMashTags.forEach(function (t) {
                         console.log('Unsubscribping user: ' + connectedUser.get('name') + ' from mashtag: ' + t.get('name'));
                         t.watchingUsers.remove(connectedUser);
                     });
@@ -393,14 +395,14 @@ function getConnectedUser(data, client) {
         });
     } 
     //Looks like the user has a new session for some reason. try and deal with this
-    else if (!_.any(connectedUser.clientList, function(c) { return c == client; })) {
+    else if (!_.any(connectedUser.clientList, function (c) { return c == client; })) {
         console.log('[getConnectedUser] existing user: ' + connectedUser.get('name') + ' on new client: ' + client.sessionId);
         connectedUser.currentConnections++;
         connectedUser.clientList.push(client);
 
         //Set disconnect here so we can destroy the user model
-        client.on('disconnect', function(){ 
-            clientDisconnect(client, function() {
+        client.on('disconnect', function () { 
+            clientDisconnect(client, function () {
                 if(connectedUser.currentConnections > 1) {
                     connectedUser.currentConnections--;
                 }
@@ -422,8 +424,14 @@ function getConnectedUser(data, client) {
     return connectedUser;
 }
 
-//Handle receipt of client messages over socket
-function message(client, socket, msg){
+/*
+ * Event handler for new chat messages. Stores the chat in redis and broadcasts it to all connected clients.
+ * 
+ * @param {object} client
+ * @param {object} socket
+ * @param {json string} msg
+ */
+function message(client, socket, msg) {
     if(msg.rediskey) {
         console.log('received from client: ' + msg.rediskey);
     }
@@ -433,9 +441,9 @@ function message(client, socket, msg){
     else {
         var chat = new models.ChatEntry();
         chat.mport(msg);
-        client.connectSession(function(err, data) {
+        client.connectSession(function (err, data) {
             if(err) {
-                disconnectAndRedirectClient(client,function() {
+                disconnectAndRedirectClient(client,function () {
                     console.log('[message] Error on connectSession: ' + err);
                 });
                 return;
@@ -443,7 +451,7 @@ function message(client, socket, msg){
 
             var connectedUser = getConnectedUser(data, client);
             if(!connectedUser) {
-                disconnectAndRedirectClient(client,function() {
+                disconnectAndRedirectClient(client,function () {
                     console.log('[message] connectedUser is null or empty');
                 });
                 return;
@@ -456,7 +464,7 @@ function message(client, socket, msg){
             var userName = connectedUser.get('name');
             chat.set({'name': userName, 'text': cleanChat});
 
-            rc.get('userban:'+userName, function(err, udata){
+            rc.get('userban:'+userName, function (err, udata) {
                 if (err) { console.log('Error: ' + err); }
                 else if (udata == 1)
                 {
@@ -470,7 +478,7 @@ function message(client, socket, msg){
                         else {
                             //set a timer to reset this
                             clearTimeout(topPoster.timeOut);
-                            topPoster.timeOut = setTimeout(function() {
+                            topPoster.timeOut = setTimeout(function () {
                                 topPoster.count = 0;
                             },5000);
 
@@ -487,7 +495,7 @@ function message(client, socket, msg){
                     if(chat.get('text').length > 400)
                         return;
 
-                    rc.incr('next.chatentry.id', function(err, newId) {
+                    rc.incr('next.chatentry.id', function (err, newId) {
                         chat.set({id: newId, time:ncutils.getClockTime(), datetime: new Date().getTime()});
                         console.log(chat.xport());
 
@@ -508,7 +516,7 @@ function message(client, socket, msg){
     }
 }
 
-var broadcastChat = function(chat, client) {
+var broadcastChat = function (chat, client) {
     nodeChatModel.chats.add(chat);
 
     console.log('[' + client.sessionId + '] ' + chat.xport());
@@ -526,14 +534,14 @@ function handleDirects(chat, originalUser) {
 
     if(direct) {
         console.log('looking for direct targer user ' + direct);
-        var foundUser = nodeChatModel.users.find(function(user){return user.get('name').toLowerCase() == direct;});
+        var foundUser = nodeChatModel.users.find(function (user) {return user.get('name').toLowerCase() == direct;});
         
         console.log('found user is ' + foundUser);
         if (foundUser) {
             console.log('Located direct targer user' + foundUser.get('name'));
             foundUser.directs.add(chat);
 
-            _.each(foundUser.clientList, function(client) { 
+            _.each(foundUser.clientList, function (client) { 
                 client.send({
                     event: 'direct',
                     data: chat.xport()
@@ -543,7 +551,7 @@ function handleDirects(chat, originalUser) {
             rc.rpush('user:' + foundUser.get('name') + '.directs', chat.xport({recurse: false}), redis.print);
 
             //Send back to the original user
-            _.each(originalUser.clientList, function(client) { 
+            _.each(originalUser.clientList, function (client) { 
                 client.send({
                     event: 'direct',
                     data: chat.xport()
@@ -584,12 +592,12 @@ function handleMashTags(chat, user) {
         var alreadyNotifiedUsers = new Array(); //Make sure we only send a multi-tagged chat once
 
         for (var t in mashTags) {
-            var foundTag = nodeChatModel.globalMashTags.find(function(tag){return tag.get('name') == mashTags[t];});
+            var foundTag = nodeChatModel.globalMashTags.find(function (tag) {return tag.get('name') == mashTags[t];});
 
             //Create a new mashTag if we need to
             if (!foundTag) {
                 var createTag = function (tagName) {
-                    rc.incr('next.mashtag.id', function(err, newMashId){
+                    rc.incr('next.mashtag.id', function (err, newMashId) {
                         foundTag = new models.MashTagModel({'id': newMashId, 'name': tagName});
 
                         //Add the tag to the global list, the users list (since they submitted it), and the chat message. Then add subcribe the user
@@ -609,7 +617,7 @@ function handleMashTags(chat, user) {
             } 
             else {
                 //In the case the tag exists, check to see if the submitting user is watching it
-                if(!foundTag.watchingUsers.some(function(u) { return u == user; })) { 
+                if(!foundTag.watchingUsers.some(function (u) { return u == user; })) { 
                     foundTag.watchingUsers.add(user);
 
                     sendMashTagsToUser(user, foundTag);
@@ -636,7 +644,7 @@ function addMashTagToStore(mashTag) {
 
     var rKey = 'mashtags';
 
-    rc.sadd(rKey, mashTag.xport({recurse: false}), function(err,data) {
+    rc.sadd(rKey, mashTag.xport({recurse: false}), function (err,data) {
         if (err) console.log('[addMashTagToStore] SADD failed for key: ' + rKey + ' and value: ');
         else console.log('[addMashTagToStore] SADD succeeded for key: ' + rKey + ' and value: '); 
     });
@@ -651,10 +659,10 @@ function saveMashtagForUser(user, mashTag) {
 
     var rKey = 'user:' + user.get('name') + '.mashtags';
 
-    rc.sismember(rKey, mashTag.id, function(err, data) {
+    rc.sismember(rKey, mashTag.id, function (err, data) {
         if (err) console.log('SISMEMBER failed for key: ' + rKey + ' and value: ' + mashTag.id);
         else if (data == '0') {
-            rc.sadd(rKey, mashTag.id, function(err, data) {
+            rc.sadd(rKey, mashTag.id, function (err, data) {
                 if (err) console.log('SADD failed for key: ' + rKey + ' and value: ' + mashTag.id);
                 else console.log('SADD succeeded for key: ' + rKey + ' and value: ' + mashTag.id);
             });
@@ -669,7 +677,7 @@ function saveMashtagForUser(user, mashTag) {
 function deleteMashtagForUser(user, mashTag) {
     var rKey = 'user:' + user.get('name') + '.mashtags';
 
-    rc.srem(rKey, mashTag.id, function(err, data) {
+    rc.srem(rKey, mashTag.id, function (err, data) {
         if (err) console.log('SREM failed for key: ' + rKey + ' and value: ' + mashTag.id);
         else if (data == '1')
             console.log('SREM succeeded for key: ' + rKey + ' and value: ' + mashTag.id);
@@ -688,7 +696,7 @@ function broadcastGlobalMashTag(mashTag) {
 
 //Helper function to send tags to a user
 function sendMashTagsToUser(user, mashTag) {
-    _.each(user.clientList, function(client) { 
+    _.each(user.clientList, function (client) { 
         client.send({
             event: 'mashtag',
             data: mashTag.xport({recurse: false})
@@ -701,7 +709,7 @@ function checkForMashTagUnSub(chat, user) {
     var mashTagsToRemove = mashlib.getChunksFromString(chat.get('text'), '-');
     if(mashTagsToRemove.length > 0) {
         for (var t in mashTagsToRemove) {
-            var foundTag = nodeChatModel.globalMashTags.find(function(tag){return tag.get('name') == mashTagsToRemove[t];});
+            var foundTag = nodeChatModel.globalMashTags.find(function (tag) {return tag.get('name') == mashTagsToRemove[t];});
 
             //Try and remove it from redis whether we found it or not, in case of sync issues
             deleteMashtagForUser(user, mashTagsToRemove[t]);
@@ -710,7 +718,7 @@ function checkForMashTagUnSub(chat, user) {
                 foundTag.watchingUsers.remove(user);
 
                 //Notify client that tag was unsub'd
-                _.each(user.clientList, function(client) { 
+                _.each(user.clientList, function (client) { 
                    console.log('notified client ' + client.sessionId); 
                     client.send({
                         event: 'mashtag:delete',
@@ -726,12 +734,12 @@ function checkForMashTagUnSub(chat, user) {
 }
 
 //Send the chat to all currently subscribed users for a mashTag
-function notifySubscribedMashTagUsers(chat, mashTag, doNotNotifyList){
-    mashTag.watchingUsers.forEach(function(user){
+function notifySubscribedMashTagUsers(chat, mashTag, doNotNotifyList) {
+    mashTag.watchingUsers.forEach(function (user) {
         if (doNotNotifyList[user.get('name')]) return;
 
         console.log('[notifySubscribedMashTagUsers] notifying user: ' + user.get('name') + ' for chat: ' + chat.xport());
-        _.each(user.clientList, function(client) { 
+        _.each(user.clientList, function (client) { 
             console.log('[notifySubscribedMashTagUsers] client send for user: ' + user.get('name') + ' for client: ' + client.sessionId);
             client.send({
                 event: 'mash',
@@ -744,14 +752,20 @@ function notifySubscribedMashTagUsers(chat, mashTag, doNotNotifyList){
     });
 }
 
-//Handle client disconnect decrementing the count then running the continuation
+/*
+ * Event handler for client disconnects. Simply broadcasts the new active client count.
+ * 
+ * @param {object} client
+ */
 function clientDisconnect(client, next) {
     console.log('Client disconnecting: ' + client.sessionId);
 
     next();
 }
 
-//Open a config file (currently empty) to see if we are on a server
+/*
+ * Open a config file (currently empty) to see if we are on a server
+ */
 path.exists(config_file, function (exists) {
     console.log('Attempting to use config at ' + config_file);
     if (!exists) {
@@ -760,7 +774,7 @@ path.exists(config_file, function (exists) {
         var port = dev_port;
 
         //Hack, delete the old css. For some reason the middleware is not recompiling
-        fs.unlink('./public/main.css', function(err) {
+        fs.unlink('./public/main.css', function (err) {
             if (err) console.log('Unlink failed for ./public/main.css: ' + err);
             else console.log('Unlinked ./public/main.css');
         });
@@ -771,7 +785,7 @@ path.exists(config_file, function (exists) {
           path: '/main.css'
         }
 
-        http.get(options, function(res){console.log('GET main.css complete')});
+        http.get(options, function (res) {console.log('GET main.css complete')});
     }
     else {
         console.log('config found. starting in server mode');
@@ -781,7 +795,7 @@ path.exists(config_file, function (exists) {
 
     console.log('listening on port ' + port);
 
-    app.get('/', restrict, function(req, res){
+    app.get('/', restrict, function (req, res) {
         res.render('index', {
             locals: { name: req.session.user.name, port: port, hash: JSON.stringify(req.session.hash) }
         });

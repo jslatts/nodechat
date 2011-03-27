@@ -1,27 +1,41 @@
-//
-//Controllers
-//
+/*!
+ * controllers.js
+ * Copyright(c) 2011 Justin Slattery <justin.slattery@fzysqr.com> 
+ * MIT Licensed
+ */
+
+/*
+ * Sets up master view for '/' page.
+ *
+ *  - Store passed hash value
+ *  - Create app level model and view
+ *  - Initialize socket.io connection back to server
+ *  - Define socket.io message routing
+ */
 NodeChatController = {
-    init: function(options) {
+    init: function (options) {
+        var mySocket, hash, view, trying, connected;
+
         this.socket = new io.Socket(null, {port: options.port
             , transports: ['websocket', 'flashsocket', 'xhr-multipart', 'htmlfile']
             , rememberTransport: false
-            , tryTransportsOnConnectTimeout: false
+            , tryTransportsOnConnectTimeout: false 
         });
-        var mySocket = this.socket;
+
+        mySocket = this.socket;
 
         this.hash = options.hash;
-        var hash = this.hash;
+        hash = this.hash;
         log('hash is ' + options.hash);
 
 
         this.model = new models.NodeChatModel();
         this.view = new NodeChatView({model: this.model, socket: this.socket, el: $('#content'), userName: options.userName});
-        var view = this.view;
-        this.connected = false;
+        view = this.view;
+        connected = false;
 
 
-        this.socket.on('connect', function() { 
+        this.socket.on('connect', function () { 
             mySocket.send({
                 event: 'clientauthrequest',
                 data: hash
@@ -29,30 +43,31 @@ NodeChatController = {
             log('hash is ' + hash);
 
             log('Connected! Oh hai!');
-            this.connected = true;
+            connected = true;
             view.setConnected(true);
         }); 
 
         nodeChatController = this;
-        this.socket.on('message', function(msg) {nodeChatController.msgReceived(msg)});
-
-        //Try and reconnect if we get disconnected
-        this.socket.on('disconnect', function(){
-            log('Disconnected from nodechat. Oh noes!');
-            connected = false;
-            view.setConnected(false);
-            trying = setTimeout(tryconnect,500);
+        this.socket.on('message', function (msg) { 
+            nodeChatController.msgReceived(msg); 
         });
 
-        function tryconnect(){
-            if(!connected) {
+        function tryconnect() {
+            if (!connected) {
                 log('Trying to reconnect...');
                 mySocket.connect();
                 clearTimeout(trying);
-                trying = setTimeout(tryconnect,30000);
+                trying = setTimeout(tryconnect, 30000);
             }
         }
-          
+
+        //Try and reconnect if we get disconnected
+        this.socket.on('disconnect', function () {
+            log('Disconnected from nodechat. Oh noes!');
+            connected = false;
+            view.setConnected(false);
+            trying = setTimeout(tryconnect, 500);
+        });
         
         this.socket.connect();
 
@@ -61,8 +76,8 @@ NodeChatController = {
         return this;
     }
 
-    , msgReceived: function(message){
-        switch(message.event) {
+    , msgReceived: function (message) {
+        switch (message.event) {
             case 'initial':
                 this.model.mport(message.data);
                 break;
@@ -86,7 +101,7 @@ NodeChatController = {
                 user.mport(message.data);
 
                 //In case of refresh/socket/whatever bugs, only add a user once
-                if(!this.model.users.some(function(u) { return u.get('name').toLowerCase() == user.get('name').toLowerCase(); }))
+                if(!this.model.users.some(function (u) { return u.get('name').toLowerCase() == user.get('name').toLowerCase(); }))
                     this.model.users.add(user);
                 break;
 
@@ -96,7 +111,7 @@ NodeChatController = {
                 sUser.mport(message.data);
 
                 //Because we don't have the actual model, find anything with the same name and remove it
-                var users = this.model.users.filter(function(u) { return u.get('name').toLowerCase() == sUser.get('name').toLowerCase(); });
+                var users = this.model.users.filter(function (u) { return u.get('name').toLowerCase() == sUser.get('name').toLowerCase(); });
                 this.model.users.remove(users);
                 break;
 
