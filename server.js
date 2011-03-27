@@ -564,14 +564,14 @@ function handleDirects(chat, originalUser) {
 }
 
 function getDirectsFromString(chatText) {
+    var directIndex, direct, endPos;
     if(chatText[0] === '@')
-        var directIndex = 0;
+        directIndex = 0;
     else
-        var directIndex = chatText.indexOf(' @');
+        directIndex = chatText.indexOf(' @');
 
-    var direct = null;
-    if(directIndex > -1) {
-        var endPos = chatText.indexOf(' ', directIndex+1);
+    if ((directIndex > -1) && (chatText[directIndex + 2] !== ' ')) {
+        endPos = chatText.indexOf(' ', directIndex+1);
         direct = chatText.substring(directIndex+1, endPos).toLowerCase();
         console.log('Found direct: ' + direct);
     }
