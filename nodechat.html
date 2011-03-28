@@ -1,0 +1,971 @@
+<html>
+	<head>
+		<title>nodechat.js</title>
+		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+		<style>body {
+    margin: 0;
+    padding: 0;
+    font: 14px/1.5 'Palatino Linotype', 'Book Antiqua', Palatino, FreeSerif, serif;
+    color: #252519;
+}
+a {
+    color: #252519;
+}
+a:hover {
+    text-decoration: underline;
+    color: #19469D;
+}
+p {
+    margin: 12px 0;
+}
+h1, h2, h3 {
+    margin: 0;
+    padding: 0;
+}
+table#source {
+    width: 100%;
+    border-collapse: collapse;
+}
+table#source td:first-child {
+    padding: 30px 40px 30px 40px;
+    vertical-align: top;
+}
+table#source td:first-child,
+table#source td:first-child pre {
+    width: 450px;
+}
+table#source td:last-child {
+    padding: 30px 0 30px 40px;
+    border-left: 1px solid #E5E5EE;
+    background: #F5F5FF;
+}
+table#source tr {
+    border-bottom: 1px solid #E5E5EE;
+}
+table#source tr.filename {
+    padding-top: 40px;
+    border-top: 1px solid #E5E5EE;
+}
+table#source tr.filename td:first-child {
+    text-transform: capitalize;
+}
+table#source tr.filename td:last-child {
+    font-size: 12px;
+}
+table#source tr.filename h2 {
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+}
+table#source tr.code h1,
+table#source tr.code h2,
+table#source tr.code h3 {
+    margin-top: 30px;
+    font-family: "Lucida Grande", "Helvetica Nueue", Arial, sans-serif;
+    font-size: 18px;
+}
+table#source tr.code h2 {
+    font-size: 16px;
+}
+table#source tr.code h3 {
+    font-size: 14px;
+}
+table#source tr.code ul {
+    margin: 15px 0 15px 35px;
+    padding: 0;
+}
+table#source tr.code ul li {
+    margin: 0;
+    padding: 1px 0;
+}
+table#source tr.code ul li p {
+    margin: 0;
+    padding: 0;
+}
+table#source tr.code td:first-child pre {
+    padding: 20px;
+}
+#ribbon {
+    position: fixed;
+    top: 0;
+    right: 0;
+}
+code .string { color: #219161; }
+code .regexp { color: #219161; }
+code .keyword { color: #954121; }
+code .number { color: #19469D; }
+code .comment { color: #bbb; }
+code .this { color: #19469D; }</style>
+		<script>
+			$(function(){
+				$('tr.code').hide();
+				$('tr.filename').toggle(function(){
+					$(this).nextUntil('.filename').fadeIn();
+				}, function(){
+					$(this).nextUntil('.filename').fadeOut();
+				});
+			});
+		</script>
+	</head>
+	<body>
+<table id="source"><tbody><tr><td><h1>nodechat.js</h1><p>A realtime chat server/client implemented in node.js, socket.io, backbone.js, and redis.</p></td><td></td></tr><tr class="filename"><td><h2 id="server.js"><a href="#">server</a></h2></td><td>server.js</td></tr><tr class="code">
+<td class="docs">
+<p>Global settings
+ </p>
+</td>
+<td class="code">
+<pre><code><span class="keyword">var</span> <span class="variable">dev_port</span> = <span class="number integer">8000</span>;
+<span class="keyword">var</span> <span class="variable">server_port</span> = <span class="number integer">80</span>;
+<span class="keyword">var</span> <span class="variable">config_file</span> = <span class="string">'/home/node/nodechat_config'</span>;</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<p>Include core dependencies.<br></br> </p>
+</td>
+<td class="code">
+<pre><code><span class="keyword">var</span> <span class="variable">_</span> = <span class="variable">require</span>(<span class="string">'underscore'</span>).<span class="variable">_</span>
+    , <span class="class">Backbone</span> = <span class="variable">require</span>(<span class="string">'backbone'</span>)
+    , <span class="variable">fs</span> = <span class="variable">require</span>(<span class="string">'fs'</span>)
+    , <span class="variable">http</span> = <span class="variable">require</span>(<span class="string">'http'</span>)
+    , <span class="variable">path</span> = <span class="variable">require</span>(<span class="string">'path'</span>);</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<p>Include our own modules
+ </p>
+</td>
+<td class="code">
+<pre><code><span class="keyword">var</span> <span class="variable">models</span> = <span class="variable">require</span>(<span class="string">'./models/models'</span>)
+    , <span class="variable">auth</span> = <span class="variable">require</span>(<span class="string">'./lib/auth'</span>)
+    , <span class="variable">mashlib</span> = <span class="variable">require</span>(<span class="string">'./lib/mashlib'</span>)
+    , <span class="variable">ncutils</span> = <span class="variable">require</span>(<span class="string">'./lib/ncutils'</span>);</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<p>Require redis and setup the client 
+ </p>
+</td>
+<td class="code">
+<pre><code><span class="keyword">var</span> <span class="variable">redis</span> = <span class="variable">require</span>(<span class="string">'redis'</span>)
+    , <span class="variable">rc</span> = <span class="variable">redis</span>.<span class="variable">createClient</span>();
+
+<span class="variable">redis</span>.<span class="variable">debug_mode</span> = <span class="variable">false</span>;
+
+<span class="variable">rc</span>.<span class="variable">on</span>(<span class="string">'error'</span>, <span class="keyword">function</span> (<span class="variable">err</span>) {
+    <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'Error '</span> + <span class="variable">err</span>);
+});</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<p>Setup connect, express, socket, and the connect-redis session store
+ </p>
+</td>
+<td class="code">
+<pre><code><span class="keyword">var</span> <span class="variable">express</span> = <span class="variable">require</span>(<span class="string">'express'</span>)
+    , <span class="variable">app</span> = <span class="variable">express</span>.<span class="variable">createServer</span>()
+    , <span class="variable">connect</span> = <span class="variable">require</span>(<span class="string">'connect'</span>)
+    , <span class="variable">jade</span> = <span class="variable">require</span>(<span class="string">'jade'</span>)
+    , <span class="variable">stylus</span> = <span class="variable">require</span>(<span class="string">'stylus'</span>)
+    , <span class="variable">socket</span> = <span class="variable">require</span>(<span class="string">'socket.io'</span>).<span class="variable">listen</span>(<span class="variable">app</span>)
+    , <span class="class">RedisStore</span> = <span class="variable">require</span>(<span class="string">'connect-redis'</span>);
+
+<span class="variable">app</span>.<span class="variable">set</span>(<span class="string">'view engine'</span>, <span class="string">'jade'</span>);
+<span class="variable">app</span>.<span class="variable">set</span>(<span class="string">'view options'</span>, {<span class="variable">layout</span>: <span class="variable">false</span>});
+<span class="variable">app</span>.<span class="variable">use</span>(<span class="variable">express</span>.<span class="variable">bodyParser</span>());
+<span class="variable">app</span>.<span class="variable">use</span>(<span class="variable">express</span>.<span class="variable">cookieParser</span>());
+<span class="variable">app</span>.<span class="variable">use</span>(<span class="variable">express</span>.<span class="variable">session</span>({ <span class="variable">store</span>: <span class="keyword">new</span> <span class="class">RedisStore</span>(), <span class="variable">secret</span>: <span class="string">'Secretly I am an elephant'</span> }));
+<span class="variable">app</span>.<span class="variable">use</span>(<span class="variable">express</span>.<span class="variable">static</span>(<span class="string">'./public'</span>));
+<span class="variable">app</span>.<span class="variable">use</span>(<span class="variable">stylus</span>.<span class="variable">middleware</span>({
+    <span class="variable">src</span>: <span class="string">'./views'</span>
+  , <span class="variable">dest</span>: <span class="string">'./public'</span>
+}));
+
+<span class="comment">//setup stylus</span>
+<span class="keyword">function</span> <span class="variable">compile</span>(<span class="variable">str</span>, <span class="variable">path</span>, <span class="variable">fn</span>) {
+    <span class="variable">stylus</span>(<span class="variable">str</span>)
+        .<span class="variable">set</span>(<span class="string">'filename'</span>, <span class="variable">path</span>)
+        .<span class="variable">set</span>(<span class="string">'compress'</span>, <span class="variable">true</span>)
+        .<span class="variable">set</span>(<span class="string">'force'</span>, <span class="variable">true</span>);
+}</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<p> Middleware that decides what a valid login looks like. In this case, just verify that we have a session object for the user.</p>
+
+<p> This is an express <a href="http://expressjs.com/guide.html#route-middleware">route middleware</a>. Control is passed to the middleware function before the route function is called. We use restrictAccess() to verify that we have a valid user key in the session, implying that authentication has succeeded, before we send the client to the index.jade template. If we do not have a valid user in the session, then we redirect to the '/login' route. This effectively locks down our '/' route from unauthenticated access. You could add the restrictAccess() all to any route you want to protect.
+ </p>
+</td>
+<td class="code">
+<pre><code><span class="keyword">function</span> <span class="variable">restrict</span>(<span class="variable">req</span>, <span class="variable">res</span>, <span class="variable">next</span>) {
+    <span class="keyword">if</span> (<span class="variable">req</span>.<span class="variable">session</span>.<span class="variable">user</span>) {
+        <span class="variable">next</span>();
+    } <span class="keyword">else</span> {
+        <span class="variable">req</span>.<span class="variable">session</span>.<span class="variable">error</span> = <span class="string">'Access denied!'</span>;
+        <span class="variable">res</span>.<span class="variable">redirect</span>(<span class="string">'/login'</span>);
+    }
+}</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<p> Tell connect to destory the session.
+ </p>
+</td>
+<td class="code">
+<pre><code><span class="variable">app</span>.<span class="variable">get</span>(<span class="string">'/logout'</span>, <span class="keyword">function</span> (<span class="variable">req</span>, <span class="variable">res</span>) {
+    <span class="comment">// destroy the user's session to log them out</span>
+    <span class="comment">// will be re-created next request</span>
+    <span class="variable">req</span>.<span class="variable">session</span>.<span class="variable">destroy</span>(<span class="keyword">function</span> () {
+        <span class="variable">res</span>.<span class="variable">redirect</span>(<span class="string">'home'</span>);
+    });
+});
+
+
+<span class="variable">app</span>.<span class="variable">get</span>(<span class="string">'/disconnect'</span>, <span class="keyword">function</span> (<span class="variable">req</span>, <span class="variable">res</span>) {
+    <span class="variable">res</span>.<span class="variable">render</span>(<span class="string">'disconnect'</span>);
+});</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<h2>Route GET /login</h2>
+
+<h2>Template login.jade</h2>
+</td>
+<td class="code">
+<pre><code><span class="variable">app</span>.<span class="variable">get</span>(<span class="string">'/login'</span>, <span class="keyword">function</span> (<span class="variable">req</span>, <span class="variable">res</span>) {
+    <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'GET /login'</span>);
+    <span class="variable">res</span>.<span class="variable">render</span>(<span class="string">'login'</span>);
+});</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<h2>Route POST /login</h2>
+
+<p>Calls the authentication module to verify login details. Failures are redirected back to the login page.</p>
+
+<p>If the authentication module gives us a user object back, we ask connect to regenerate the session and send the client back to index. Note: we specify a <em>long</em> cookie age so users won't have to log in frequently. We also set the httpOnly flag to false (I know, not so secure) to make the cookie available over <a href="http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/net/Socket.html">Flash Sockets</a>.
+ </p>
+</td>
+<td class="code">
+<pre><code><span class="variable">app</span>.<span class="variable">post</span>(<span class="string">'/login'</span>, <span class="keyword">function</span> (<span class="variable">req</span>, <span class="variable">res</span>) {
+    <span class="variable">auth</span>.<span class="variable">authenticate</span>(<span class="variable">req</span>.<span class="variable">body</span>.<span class="variable">username</span>, <span class="variable">req</span>.<span class="variable">body</span>.<span class="variable">password</span>, <span class="keyword">function</span> (<span class="variable">err</span>, <span class="variable">user</span>) {
+        <span class="keyword">if</span> (<span class="variable">user</span>) {
+            <span class="comment">// Regenerate session when signing in</span>
+            <span class="comment">// to prevent fixation </span>
+            <span class="variable">req</span>.<span class="variable">session</span>.<span class="variable">regenerate</span>(<span class="keyword">function</span> () {
+                <span class="comment">// Store the user's primary key </span>
+                <span class="comment">// in the session store to be retrieved,</span>
+                <span class="comment">// or in this case the entire user object</span>
+                <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'regenerated session id '</span> + <span class="variable">req</span>.<span class="variable">session</span>.<span class="variable">id</span>);
+                <span class="variable">req</span>.<span class="variable">session</span>.<span class="variable">cookie</span>.<span class="variable">maxAge</span> = <span class="number integer">100</span> * <span class="number integer">24</span> * <span class="number integer">60</span> * <span class="number integer">60</span> * <span class="number integer">1000</span>; <span class="comment">//Force longer cookie age</span>
+                <span class="variable">req</span>.<span class="variable">session</span>.<span class="variable">cookie</span>.<span class="variable">httpOnly</span> = <span class="variable">false</span>;
+                <span class="variable">req</span>.<span class="variable">session</span>.<span class="variable">user</span> = <span class="variable">user</span>;
+                <span class="variable">req</span>.<span class="variable">session</span>.<span class="variable">hash</span> = <span class="variable">user</span>.<span class="variable">hashpass</span> || <span class="string">'No Hash'</span>;
+
+                <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'Storing new hash for user '</span> + <span class="variable">user</span>.<span class="variable">name</span> + <span class="string">': '</span> + <span class="variable">req</span>.<span class="variable">session</span>.<span class="variable">hash</span>);
+                <span class="variable">res</span>.<span class="variable">redirect</span>(<span class="string">'/'</span>);
+            });
+        } <span class="keyword">else</span> {
+            <span class="variable">req</span>.<span class="variable">session</span>.<span class="variable">error</span> = <span class="string">'Authentication failed, please check your username and password.'</span>;
+            <span class="variable">res</span>.<span class="variable">redirect</span>(<span class="string">'back'</span>);
+        }
+    });
+});</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<p>Serve up any static file requested by the client</p>
+
+<p> </p>
+</td>
+<td class="code">
+<pre><code><span class="variable">app</span>.<span class="variable">get</span>('</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<p>.(js|css)', function (req, res) {
+    res.sendfile('./' + req.url);
+});</p>
+
+<p>//create local state
+var nodeChatModel = new models.NodeChatModel();</p>
+
+<p>rc.lrange('chatentries', -1000, -1, function (err, data) {
+    if (err)
+    {
+        console.log('Error: ' + err);
+    }
+    else if (data) {
+        _.each(data, function (jsonChat) {
+            try {
+                var chat = new models.ChatEntry();
+                chat.mport(jsonChat);
+                nodeChatModel.chats.add(chat);
+            }
+            catch (err) {
+                console.log('Failed to revive chat ' + jsonChat + ' with err ' + err);
+            }
+        });</p>
+
+<pre><code>    console.log('Revived ' + nodeChatModel.chats.length + ' chats');
+}
+else {
+    console.log('No data returned for key');
+}</code></pre>
+
+<p>});</p>
+
+<p>rc.smembers('mashtags', function (err, data) {
+    if (err) { 
+        console.log('SMEMBERS for key mashtags failed with error: ' + err); 
+    }
+    else if (data) {
+        _.each(data, function (jsonMashTag) {
+            try {
+                var mashTag = new models.MashTagModel();
+                mashTag.mport(jsonMashTag);
+                nodeChatModel.globalMashTags.add(mashTag);
+            }
+            catch (err) {
+                console.log('Failed to revive mashTag ' + jsonMashTag + ' with err ' + err);
+            }
+        });</p>
+
+<pre><code>    console.log('Revived ' + nodeChatModel.globalMashTags.length + ' mashtags');
+}
+else {
+    console.log('SMEMBERS for key mashtags returned no data');
+}</code></pre>
+
+<p>});</p>
+
+<p>/*
+When we have a client that shouldn't be connected, <strong>kick 'em off!</strong>' </p>
+
+<h2></h2>
+
+<ul><li><p><strong>param</strong>: <em>object</em>  client</p></li><li><p><strong>param</strong>: <em>function</em>  fn</p></li></ul>
+</td>
+<td class="code">
+<pre><code><span class="keyword">function</span> <span class="variable">disconnectAndRedirectClient</span>(<span class="variable">client</span>, <span class="variable">fn</span>) {
+    <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'Disconnecting unauthenticated user'</span>);
+    <span class="variable">client</span>.<span class="variable">send</span>({ <span class="variable">event</span>: <span class="string">'disconnect'</span> });
+    <span class="variable">client</span>.<span class="variable">connection</span>.<span class="variable">end</span>();
+    <span class="variable">fn</span>();
+    <span class="keyword">return</span>;
+}</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<p>Handle the new connection event for socket. </p>
+
+<p>connectSession() is a helper method that will verify a client's validity by checking for a cookie in the request header, then, if we find it,  <em>pulling their session out of redis</em>. </p>
+
+<p>We then use the helper method in the 'connection' handler for our socket listener. Instead accepting any user connection, we are going to check that the client has a valid session (meaning they logged in). If they don't, give them the boot! If they do, then we store a copy of the session data (yay we have access!) in the client object and then setup the rest of the socket events. Finally, send them a welcome message just to prove that we remembered their profile. 
+ </p>
+</td>
+<td class="code">
+<pre><code><span class="variable">socket</span>.<span class="variable">on</span>(<span class="string">'connection'</span>, <span class="keyword">function</span> (<span class="variable">client</span>) {
+    <span class="comment">// helper function that goes inside your socket connection</span>
+    <span class="variable">client</span>.<span class="variable">connectSession</span> = <span class="keyword">function</span> (<span class="variable">fn</span>) {
+        <span class="keyword">if</span> (!<span class="variable">client</span>.<span class="variable">request</span> || !<span class="variable">client</span>.<span class="variable">request</span>.<span class="variable">headers</span> || !<span class="variable">client</span>.<span class="variable">request</span>.<span class="variable">headers</span>.<span class="variable">cookie</span>) {
+            <span class="variable">disconnectAndRedirectClient</span>(<span class="variable">client</span>, <span class="keyword">function</span> () {
+                <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'Null request/header/cookie!'</span>);
+            });
+            <span class="keyword">return</span>;
+        }
+
+        <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'Cookie is'</span> + <span class="variable">client</span>.<span class="variable">request</span>.<span class="variable">headers</span>.<span class="variable">cookie</span>);
+
+        <span class="keyword">var</span> <span class="variable">match</span>, <span class="variable">sid</span>;
+
+        <span class="variable">match</span> = <span class="variable">client</span>.<span class="variable">request</span>.<span class="variable">headers</span>.<span class="variable">cookie</span>.<span class="variable">match</span>(<span class="regexp">/connect\.sid=([^;]+)/</span>);
+        <span class="keyword">if</span> (!<span class="variable">match</span> || <span class="variable">match</span>.<span class="variable">length</span> &<span class="variable">lt</span>; <span class="number integer">2</span>) {
+            <span class="variable">disconnectAndRedirectClient</span>(<span class="variable">client</span>, <span class="keyword">function</span> () {
+                <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'Failed to find connect.sid in cookie'</span>);
+            });
+            <span class="keyword">return</span>;
+        }
+
+        <span class="variable">sid</span> = <span class="variable">unescape</span>(<span class="variable">match</span>[<span class="number integer">1</span>]);
+
+        <span class="variable">rc</span>.<span class="variable">get</span>(<span class="variable">sid</span>, <span class="keyword">function</span> (<span class="variable">err</span>, <span class="variable">data</span>) {
+            <span class="variable">fn</span>(<span class="variable">err</span>, <span class="class">JSON</span>.<span class="variable">parse</span>(<span class="variable">data</span>));
+        });
+    };
+
+    <span class="variable">client</span>.<span class="variable">connectSession</span>(<span class="keyword">function</span> (<span class="variable">err</span>, <span class="variable">data</span>) {
+        <span class="keyword">if</span> (<span class="variable">err</span>) {
+            <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'Error on connectionSession: '</span> + <span class="variable">err</span>);
+            <span class="keyword">return</span>;
+        }
+
+        <span class="keyword">var</span> <span class="variable">connectedUser</span> = <span class="variable">getConnectedUser</span>(<span class="variable">data</span>, <span class="variable">client</span>);
+        <span class="keyword">if</span>(<span class="variable">connectedUser</span>) {
+            <span class="variable">client</span>.<span class="variable">on</span>(<span class="string">'message'</span>, <span class="keyword">function</span> (<span class="variable">msg</span>) {<span class="variable">message</span>(<span class="variable">client</span>, <span class="variable">socket</span>, <span class="variable">msg</span>)});
+
+            <span class="variable">sendInitialDataToClient</span>(<span class="variable">client</span>);
+        }
+        <span class="keyword">else</span> 
+            <span class="variable">console</span>.<span class="variable">log</span>(&<span class="variable">quot</span>;<span class="class">Failed</span> <span class="variable">to</span> <span class="variable">connect</span> <span class="variable">user</span>&<span class="variable">quot</span>;);
+    });
+});
+
+<span class="keyword">var</span> <span class="variable">topPoster</span> = {};
+<span class="variable">topPoster</span>.<span class="variable">name</span> = <span class="string">'noone'</span>;
+<span class="variable">topPoster</span>.<span class="variable">count</span> = <span class="number integer">0</span>;
+<span class="variable">topPoster</span>.<span class="variable">lettercount</span> = <span class="number integer">0</span>;
+
+<span class="keyword">function</span> <span class="variable">sendInitialDataToClient</span>(<span class="variable">client</span>) {
+    <span class="keyword">if</span> (<span class="variable">nodeChatModel</span>.<span class="variable">chats</span>.<span class="variable">length</span> &<span class="variable">gt</span>; <span class="number integer">100</span>)
+        <span class="keyword">var</span> <span class="variable">chatHistory</span> = <span class="variable">nodeChatModel</span>.<span class="variable">chats</span>.<span class="variable">rest</span>(<span class="variable">nodeChatModel</span>.<span class="variable">chats</span>.<span class="variable">length</span>-<span class="number integer">100</span>);
+    <span class="keyword">else</span> 
+        <span class="keyword">var</span> <span class="variable">chatHistory</span> = <span class="variable">nodeChatModel</span>.<span class="variable">chats</span>;
+
+    <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'sending '</span> + <span class="variable">chatHistory</span>.<span class="variable">length</span>);
+
+    <span class="variable">nodeChatModel</span>.<span class="variable">users</span>.<span class="variable">forEach</span>(<span class="keyword">function</span> (<span class="variable">user</span>) {
+        <span class="keyword">var</span> <span class="variable">sUser</span> = <span class="keyword">new</span> <span class="variable">models</span>.<span class="class">User</span>({<span class="variable">name</span>:<span class="variable">user</span>.<span class="variable">get</span>(<span class="string">'name'</span>)});
+        <span class="variable">client</span>.<span class="variable">send</span>({
+            <span class="variable">event</span>: <span class="string">'user:add'</span>,
+            <span class="variable">data</span>: <span class="variable">sUser</span>.<span class="variable">xport</span>()
+        });
+    });
+
+    <span class="variable">chatHistory</span>.<span class="variable">forEach</span>(<span class="keyword">function</span> (<span class="variable">chat</span>) {
+        <span class="variable">client</span>.<span class="variable">send</span>({
+            <span class="variable">event</span>: <span class="string">'chat'</span>,
+            <span class="variable">data</span>: <span class="variable">chat</span>.<span class="variable">xport</span>()
+        });
+    });
+
+    <span class="variable">nodeChatModel</span>.<span class="variable">globalMashTags</span>.<span class="variable">forEach</span>(<span class="keyword">function</span> (<span class="variable">mashTag</span>) {
+        <span class="variable">client</span>.<span class="variable">send</span>({
+            <span class="variable">event</span>: <span class="string">'globalmashtag'</span>,
+            <span class="variable">data</span>: <span class="variable">mashTag</span>.<span class="variable">xport</span>({<span class="variable">recurse</span>: <span class="variable">false</span>})
+        });
+    });
+}
+
+<span class="keyword">function</span> <span class="variable">getConnectedUser</span>(<span class="variable">data</span>, <span class="variable">client</span>) {
+    <span class="keyword">if</span>(!<span class="variable">data</span> || !<span class="variable">data</span>.<span class="variable">user</span> || !<span class="variable">data</span>.<span class="variable">user</span>.<span class="variable">name</span>) {
+        <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'[getConnectedUser] called with null data, data.user or data.user.name'</span>);
+        <span class="keyword">return</span>;
+    }
+
+    <span class="variable">cleanName</span> = <span class="variable">data</span>.<span class="variable">user</span>.<span class="variable">name</span>.<span class="variable">replace</span>(<span class="regexp">/&lt;/g</span>, &<span class="variable">quot</span>;&<span class="variable">lt</span>;&<span class="variable">quot</span>;).<span class="variable">replace</span>(<span class="regexp">/&gt;/g</span>, &<span class="variable">quot</span>;&<span class="variable">gt</span>;&<span class="variable">quot</span>;);
+
+    <span class="keyword">var</span> <span class="variable">connectedUser</span> = <span class="variable">nodeChatModel</span>.<span class="variable">users</span>.<span class="variable">find</span>(<span class="keyword">function</span> (<span class="variable">user</span>) {<span class="keyword">return</span> <span class="variable">user</span>.<span class="variable">get</span>(<span class="string">'name'</span>) == <span class="variable">cleanName</span>;});
+
+    <span class="keyword">if</span>(!<span class="variable">connectedUser</span>) {
+        <span class="variable">connectedUser</span> = <span class="keyword">new</span> <span class="variable">models</span>.<span class="class">User</span>({<span class="string">'client'</span>: <span class="variable">client</span>, <span class="string">'name'</span>: <span class="variable">cleanName</span>});
+        <span class="variable">connectedUser</span>.<span class="variable">clientList</span> = <span class="keyword">new</span> <span class="class">Array</span>();
+        <span class="variable">connectedUser</span>.<span class="variable">clientList</span>.<span class="variable">push</span>(<span class="variable">client</span>);
+
+        <span class="variable">nodeChatModel</span>.<span class="variable">users</span>.<span class="variable">add</span>(<span class="variable">connectedUser</span>);
+        <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'[getConnectedUser] new user: '</span> + <span class="variable">connectedUser</span>.<span class="variable">get</span>(<span class="string">'name'</span>) + <span class="string">' on client: '</span> + <span class="variable">client</span>.<span class="variable">sessionId</span>);
+    
+        <span class="keyword">var</span> <span class="variable">sUser</span> = <span class="keyword">new</span> <span class="variable">models</span>.<span class="class">User</span>({<span class="variable">name</span>:<span class="variable">connectedUser</span>.<span class="variable">get</span>(<span class="string">'name'</span>)});
+        <span class="variable">client</span>.<span class="variable">broadcast</span>({
+            <span class="variable">event</span>: <span class="string">'user:add'</span>,
+            <span class="variable">data</span>: <span class="variable">sUser</span>.<span class="variable">xport</span>({<span class="variable">recurse</span>: <span class="variable">false</span>})
+        });
+
+
+        <span class="comment">//Grab mashtag subscriptions for user</span>
+        <span class="keyword">var</span> <span class="variable">rKey</span> = <span class="string">'user:'</span> + <span class="variable">connectedUser</span>.<span class="variable">get</span>(<span class="string">'name'</span>) + <span class="string">'.mashtags'</span>;
+        <span class="variable">rc</span>.<span class="variable">smembers</span>(<span class="variable">rKey</span>, <span class="keyword">function</span> (<span class="variable">err</span>, <span class="variable">data</span>) {
+            <span class="keyword">if</span> (<span class="variable">err</span>) <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'Error retrieving '</span> + <span class="variable">rKey</span> + <span class="string">': '</span> + <span class="variable">err</span>); 
+            <span class="keyword">else</span> <span class="keyword">if</span> (<span class="variable">data</span>) {
+                <span class="variable">_</span>.<span class="variable">each</span>(<span class="variable">data</span>, <span class="keyword">function</span> (<span class="variable">tagId</span>) {
+                <span class="keyword">try</span> {
+                    <span class="comment">//Try and find the tag in the current active list</span>
+                    <span class="variable">mashTag</span> = <span class="variable">nodeChatModel</span>.<span class="variable">globalMashTags</span>.<span class="variable">get</span>(<span class="variable">tagId</span>);
+
+                    <span class="comment">//If not found, create it and add it to the global list</span>
+                    <span class="keyword">if</span>(!<span class="variable">mashTag</span>) {
+                       <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'[getConnectedUser] tried to add invalid tag to user subscription'</span>);
+                       <span class="keyword">return</span>;
+                    }
+                        
+                    <span class="variable">mashTag</span>.<span class="variable">watchingUsers</span>.<span class="variable">add</span>(<span class="variable">connectedUser</span>);
+                    <span class="variable">sendMashTagsToUser</span>(<span class="variable">connectedUser</span>, <span class="variable">mashTag</span>);
+                    <span class="variable">connectedUser</span>.<span class="variable">followedMashTags</span>.<span class="variable">add</span>(<span class="variable">mashTag</span>);
+
+                    <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'[getConnectedUser] mashtag with id: '</span> + <span class="variable">tagId</span> + <span class="string">' revived for user: '</span> + <span class="variable">connectedUser</span>.<span class="variable">get</span>(<span class="string">'name'</span>));
+                }
+                <span class="keyword">catch</span>(<span class="variable">err</span>) {
+                    <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'[getConnectedUser] Failed to revive mashtag with key '</span> + <span class="variable">rKey</span> + <span class="string">' with id '</span> + <span class="variable">tagId</span> + <span class="string">' with err '</span> + <span class="variable">err</span>);
+                }
+            });
+
+            <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'[getConnectedUser] Revived '</span> + <span class="variable">nodeChatModel</span>.<span class="variable">chats</span>.<span class="variable">length</span> + <span class="string">' chats'</span>);
+            }
+            <span class="keyword">else</span> {
+                <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'[getConnectedUser] No data returned for key: '</span> + <span class="variable">rKey</span>);
+            }
+        });
+
+        <span class="comment">//Count multiple connections in case someone has a window open</span>
+        <span class="variable">connectedUser</span>.<span class="variable">currentConnections</span> = <span class="number integer">1</span>;
+
+        <span class="comment">//Set disconnect here so we can destroy the user model</span>
+        <span class="variable">client</span>.<span class="variable">on</span>(<span class="string">'disconnect'</span>, <span class="keyword">function</span> () { 
+            <span class="variable">clientDisconnect</span>(<span class="variable">client</span>, <span class="keyword">function</span> () {
+                <span class="keyword">if</span>(<span class="variable">connectedUser</span>.<span class="variable">currentConnections</span> &<span class="variable">gt</span>; <span class="number integer">1</span>) {
+                    <span class="variable">connectedUser</span>.<span class="variable">currentConnections</span>--;
+                }
+                <span class="keyword">else</span> {
+                    <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'Removing user from active pool: '</span> + <span class="variable">connectedUser</span>.<span class="variable">get</span>(<span class="string">'name'</span>));
+                    <span class="variable">connectedUser</span>.<span class="variable">currentConnections</span> = <span class="number integer">0</span>;
+
+                    <span class="variable">connectedUser</span>.<span class="variable">followedMashTags</span>.<span class="variable">forEach</span>(<span class="keyword">function</span> (<span class="variable">t</span>) {
+                        <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'Unsubscribping user: '</span> + <span class="variable">connectedUser</span>.<span class="variable">get</span>(<span class="string">'name'</span>) + <span class="string">' from mashtag: '</span> + <span class="variable">t</span>.<span class="variable">get</span>(<span class="string">'name'</span>));
+                        <span class="variable">t</span>.<span class="variable">watchingUsers</span>.<span class="variable">remove</span>(<span class="variable">connectedUser</span>);
+                    });
+
+                    <span class="keyword">var</span> <span class="variable">sUser</span> = <span class="keyword">new</span> <span class="variable">models</span>.<span class="class">User</span>({<span class="variable">name</span>:<span class="variable">connectedUser</span>.<span class="variable">get</span>(<span class="string">'name'</span>)});
+                    <span class="variable">socket</span>.<span class="variable">broadcast</span>({
+                        <span class="variable">event</span>: <span class="string">'user:remove'</span>,
+                        <span class="variable">data</span>: <span class="variable">sUser</span>.<span class="variable">xport</span>({<span class="variable">recurse</span>: <span class="variable">false</span>})
+                    });
+
+                    <span class="variable">nodeChatModel</span>.<span class="variable">users</span>.<span class="variable">remove</span>(<span class="variable">connectedUser</span>);
+                }
+            });
+        });
+    } 
+    <span class="comment">//Looks like the user has a new session for some reason. try and deal with this</span>
+    <span class="keyword">else</span> <span class="keyword">if</span> (!<span class="variable">_</span>.<span class="variable">any</span>(<span class="variable">connectedUser</span>.<span class="variable">clientList</span>, <span class="keyword">function</span> (<span class="variable">c</span>) { <span class="keyword">return</span> <span class="variable">c</span> == <span class="variable">client</span>; })) {
+        <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'[getConnectedUser] existing user: '</span> + <span class="variable">connectedUser</span>.<span class="variable">get</span>(<span class="string">'name'</span>) + <span class="string">' on new client: '</span> + <span class="variable">client</span>.<span class="variable">sessionId</span>);
+        <span class="variable">connectedUser</span>.<span class="variable">currentConnections</span>++;
+        <span class="variable">connectedUser</span>.<span class="variable">clientList</span>.<span class="variable">push</span>(<span class="variable">client</span>);
+
+        <span class="comment">//Set disconnect here so we can destroy the user model</span>
+        <span class="variable">client</span>.<span class="variable">on</span>(<span class="string">'disconnect'</span>, <span class="keyword">function</span> () { 
+            <span class="variable">clientDisconnect</span>(<span class="variable">client</span>, <span class="keyword">function</span> () {
+                <span class="keyword">if</span>(<span class="variable">connectedUser</span>.<span class="variable">currentConnections</span> &<span class="variable">gt</span>; <span class="number integer">1</span>) {
+                    <span class="variable">connectedUser</span>.<span class="variable">currentConnections</span>--;
+                }
+                <span class="keyword">else</span> {
+                    <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'Removing user from active pool: '</span> + <span class="variable">connectedUser</span>.<span class="variable">get</span>(<span class="string">'name'</span>));
+                    <span class="variable">connectedUser</span>.<span class="variable">currentConnections</span> = <span class="number integer">0</span>;
+                    <span class="keyword">var</span> <span class="variable">sUser</span> = <span class="keyword">new</span> <span class="variable">models</span>.<span class="class">User</span>({<span class="variable">name</span>:<span class="variable">connectedUser</span>.<span class="variable">get</span>(<span class="string">'name'</span>)});
+                    <span class="variable">socket</span>.<span class="variable">broadcast</span>({
+                        <span class="variable">event</span>: <span class="string">'user:remove'</span>,
+                        <span class="variable">data</span>: <span class="variable">sUser</span>.<span class="variable">xport</span>({<span class="variable">recurse</span>: <span class="variable">false</span>})
+                    });
+
+                    <span class="variable">nodeChatModel</span>.<span class="variable">users</span>.<span class="variable">remove</span>(<span class="variable">connectedUser</span>);
+                }
+            });
+        });
+    }
+
+    <span class="keyword">return</span> <span class="variable">connectedUser</span>;
+}</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<p>Event handler for new chat messages. Stores the chat in redis and broadcasts it to all connected clients.</p>
+
+<h2></h2>
+
+<ul><li><p><strong>param</strong>: <em>object</em>  client</p></li><li><p><strong>param</strong>: <em>object</em>  socket</p></li><li><p><strong>param</strong>: <em>json string</em>  msg</p></li></ul>
+</td>
+<td class="code">
+<pre><code><span class="keyword">function</span> <span class="variable">message</span>(<span class="variable">client</span>, <span class="variable">socket</span>, <span class="variable">msg</span>) {
+    <span class="keyword">if</span>(<span class="variable">msg</span>.<span class="variable">rediskey</span>) {
+        <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'received from client: '</span> + <span class="variable">msg</span>.<span class="variable">rediskey</span>);
+    }
+    <span class="keyword">if</span>(<span class="variable">msg</span>.<span class="variable">event</span> === <span class="string">'clientauthrequest'</span>) {
+        <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'clientauthrequest received with hash '</span> + <span class="variable">msg</span>.<span class="variable">data</span>);
+    }
+    <span class="keyword">else</span> {
+        <span class="keyword">var</span> <span class="variable">chat</span> = <span class="keyword">new</span> <span class="variable">models</span>.<span class="class">ChatEntry</span>();
+        <span class="variable">chat</span>.<span class="variable">mport</span>(<span class="variable">msg</span>);
+        <span class="variable">client</span>.<span class="variable">connectSession</span>(<span class="keyword">function</span> (<span class="variable">err</span>, <span class="variable">data</span>) {
+            <span class="keyword">if</span>(<span class="variable">err</span>) {
+                <span class="variable">disconnectAndRedirectClient</span>(<span class="variable">client</span>,<span class="keyword">function</span> () {
+                    <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'[message] Error on connectSession: '</span> + <span class="variable">err</span>);
+                });
+                <span class="keyword">return</span>;
+            }
+
+            <span class="keyword">var</span> <span class="variable">connectedUser</span> = <span class="variable">getConnectedUser</span>(<span class="variable">data</span>, <span class="variable">client</span>);
+            <span class="keyword">if</span>(!<span class="variable">connectedUser</span>) {
+                <span class="variable">disconnectAndRedirectClient</span>(<span class="variable">client</span>,<span class="keyword">function</span> () {
+                    <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'[message] connectedUser is null or empty'</span>);
+                });
+                <span class="keyword">return</span>;
+            }
+
+            <span class="keyword">var</span> <span class="variable">cleanChat</span> = <span class="variable">chat</span>.<span class="variable">get</span>(<span class="string">'text'</span>) + <span class="string">' '</span>;
+            <span class="keyword">if</span> (<span class="variable">cleanChat</span>)
+                <span class="variable">cleanChat</span> = <span class="variable">cleanChat</span>.<span class="variable">replace</span>(<span class="regexp">/&lt;/g</span>, &<span class="variable">quot</span>;&<span class="variable">lt</span>;&<span class="variable">quot</span>;).<span class="variable">replace</span>(<span class="regexp">/&gt;/g</span>, &<span class="variable">quot</span>;&<span class="variable">gt</span>;&<span class="variable">quot</span>;);
+
+            <span class="keyword">var</span> <span class="variable">userName</span> = <span class="variable">connectedUser</span>.<span class="variable">get</span>(<span class="string">'name'</span>);
+            <span class="variable">chat</span>.<span class="variable">set</span>({<span class="string">'name'</span>: <span class="variable">userName</span>, <span class="string">'text'</span>: <span class="variable">cleanChat</span>});
+
+            <span class="variable">rc</span>.<span class="variable">get</span>(<span class="string">'userban:'</span>+<span class="variable">userName</span>, <span class="keyword">function</span> (<span class="variable">err</span>, <span class="variable">udata</span>) {
+                <span class="keyword">if</span> (<span class="variable">err</span>) { <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'Error: '</span> + <span class="variable">err</span>); }
+                <span class="keyword">else</span> <span class="keyword">if</span> (<span class="variable">udata</span> == <span class="number integer">1</span>)
+                {
+                    <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'Banned: '</span> + <span class="variable">udata</span>); 
+                    <span class="keyword">return</span>;
+                }
+                <span class="keyword">else</span> {
+                    <span class="keyword">if</span> (<span class="variable">topPoster</span>.<span class="variable">name</span> == <span class="variable">userName</span> &<span class="variable">amp</span>;&<span class="variable">amp</span>; <span class="variable">userName</span> != <span class="string">'jslatts'</span>) {
+                        <span class="keyword">if</span>(<span class="variable">topPoster</span>.<span class="variable">count</span> &<span class="variable">gt</span>; <span class="number integer">5</span> || <span class="variable">topPoster</span>.<span class="variable">lettercount</span> &<span class="variable">gt</span>; <span class="number integer">700</span>)
+                            <span class="keyword">return</span>; 
+                        <span class="keyword">else</span> {
+                            <span class="comment">//set a timer to reset this</span>
+                            <span class="variable">clearTimeout</span>(<span class="variable">topPoster</span>.<span class="variable">timeOut</span>);
+                            <span class="variable">topPoster</span>.<span class="variable">timeOut</span> = <span class="variable">setTimeout</span>(<span class="keyword">function</span> () {
+                                <span class="variable">topPoster</span>.<span class="variable">count</span> = <span class="number integer">0</span>;
+                            },<span class="number integer">5000</span>);
+
+                            <span class="variable">topPoster</span>.<span class="variable">count</span>++;
+                            <span class="variable">topPoster</span>.<span class="variable">lettercount</span>+=<span class="variable">cleanChat</span>.<span class="variable">length</span>;
+                        }
+                    }
+                    <span class="keyword">else</span> {
+                        <span class="variable">topPoster</span>.<span class="variable">name</span> = <span class="variable">userName</span>;
+                        <span class="variable">topPoster</span>.<span class="variable">count</span> = <span class="number integer">1</span>;
+                        <span class="variable">topPoster</span>.<span class="variable">lettercount</span> = <span class="number integer">1</span>;
+                    }
+
+                    <span class="keyword">if</span>(<span class="variable">chat</span>.<span class="variable">get</span>(<span class="string">'text'</span>).<span class="variable">length</span> &<span class="variable">gt</span>; <span class="number integer">400</span>)
+                        <span class="keyword">return</span>;
+
+                    <span class="variable">rc</span>.<span class="variable">incr</span>(<span class="string">'next.chatentry.id'</span>, <span class="keyword">function</span> (<span class="variable">err</span>, <span class="variable">newId</span>) {
+                        <span class="variable">chat</span>.<span class="variable">set</span>({<span class="variable">id</span>: <span class="variable">newId</span>, <span class="variable">time</span>:<span class="variable">ncutils</span>.<span class="variable">getClockTime</span>(), <span class="variable">datetime</span>: <span class="keyword">new</span> <span class="class">Date</span>().<span class="variable">getTime</span>()});
+                        <span class="variable">console</span>.<span class="variable">log</span>(<span class="variable">chat</span>.<span class="variable">xport</span>());
+
+                        <span class="comment">//If we have hashes, deal with them</span>
+                        <span class="keyword">var</span> <span class="variable">shouldBroadcast</span> = <span class="variable">handleDirects</span>(<span class="variable">chat</span>, <span class="variable">connectedUser</span>); 
+                        <span class="variable">shouldBroadcast</span> = <span class="variable">shouldBroadcast</span> &<span class="variable">amp</span>;&<span class="variable">amp</span>; <span class="variable">checkForMashTagUnSub</span>(<span class="variable">chat</span>, <span class="variable">connectedUser</span>); 
+
+                        <span class="keyword">if</span>(<span class="variable">shouldBroadcast</span>)
+                            <span class="variable">shouldBroadcast</span> = <span class="variable">shouldBroadcast</span> &<span class="variable">amp</span>;&<span class="variable">amp</span>; <span class="variable">handleMashTags</span>(<span class="variable">chat</span>, <span class="variable">connectedUser</span>); 
+
+                        <span class="keyword">if</span> (<span class="variable">shouldBroadcast</span>)
+                            <span class="variable">broadcastChat</span>(<span class="variable">chat</span>,<span class="variable">client</span>);
+
+                    }); 
+                }
+            });
+        });
+    }
+}
+
+<span class="keyword">var</span> <span class="variable">broadcastChat</span> = <span class="keyword">function</span> (<span class="variable">chat</span>, <span class="variable">client</span>) {
+    <span class="variable">nodeChatModel</span>.<span class="variable">chats</span>.<span class="variable">add</span>(<span class="variable">chat</span>);
+
+    <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'['</span> + <span class="variable">client</span>.<span class="variable">sessionId</span> + <span class="string">'] '</span> + <span class="variable">chat</span>.<span class="variable">xport</span>());
+
+    <span class="variable">rc</span>.<span class="variable">rpush</span>(<span class="string">'chatentries'</span>, <span class="variable">chat</span>.<span class="variable">xport</span>({<span class="variable">recurse</span>: <span class="variable">false</span>}), <span class="variable">redis</span>.<span class="variable">print</span>);
+
+    <span class="variable">socket</span>.<span class="variable">broadcast</span>({
+        <span class="variable">event</span>: <span class="string">'chat'</span>,
+        <span class="variable">data</span>:<span class="variable">chat</span>.<span class="variable">xport</span>()
+    }); 
+}
+
+<span class="keyword">function</span> <span class="variable">handleDirects</span>(<span class="variable">chat</span>, <span class="variable">originalUser</span>) {
+    <span class="keyword">var</span> <span class="variable">direct</span> = <span class="variable">getDirectsFromString</span>(<span class="variable">chat</span>.<span class="variable">get</span>(<span class="string">'text'</span>));
+
+    <span class="keyword">if</span>(<span class="variable">direct</span>) {
+        <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'looking for direct targer user '</span> + <span class="variable">direct</span>);
+        <span class="keyword">var</span> <span class="variable">foundUser</span> = <span class="variable">nodeChatModel</span>.<span class="variable">users</span>.<span class="variable">find</span>(<span class="keyword">function</span> (<span class="variable">user</span>) {<span class="keyword">return</span> <span class="variable">user</span>.<span class="variable">get</span>(<span class="string">'name'</span>).<span class="variable">toLowerCase</span>() == <span class="variable">direct</span>;});
+        
+        <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'found user is '</span> + <span class="variable">foundUser</span>);
+        <span class="keyword">if</span> (<span class="variable">foundUser</span>) {
+            <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'Located direct targer user'</span> + <span class="variable">foundUser</span>.<span class="variable">get</span>(<span class="string">'name'</span>));
+            <span class="variable">foundUser</span>.<span class="variable">directs</span>.<span class="variable">add</span>(<span class="variable">chat</span>);
+
+            <span class="variable">_</span>.<span class="variable">each</span>(<span class="variable">foundUser</span>.<span class="variable">clientList</span>, <span class="keyword">function</span> (<span class="variable">client</span>) { 
+                <span class="variable">client</span>.<span class="variable">send</span>({
+                    <span class="variable">event</span>: <span class="string">'direct'</span>,
+                    <span class="variable">data</span>: <span class="variable">chat</span>.<span class="variable">xport</span>()
+                });
+            });
+
+            <span class="variable">rc</span>.<span class="variable">rpush</span>(<span class="string">'user:'</span> + <span class="variable">foundUser</span>.<span class="variable">get</span>(<span class="string">'name'</span>) + <span class="string">'.directs'</span>, <span class="variable">chat</span>.<span class="variable">xport</span>({<span class="variable">recurse</span>: <span class="variable">false</span>}), <span class="variable">redis</span>.<span class="variable">print</span>);
+
+            <span class="comment">//Send back to the original user</span>
+            <span class="variable">_</span>.<span class="variable">each</span>(<span class="variable">originalUser</span>.<span class="variable">clientList</span>, <span class="keyword">function</span> (<span class="variable">client</span>) { 
+                <span class="variable">client</span>.<span class="variable">send</span>({
+                    <span class="variable">event</span>: <span class="string">'direct'</span>,
+                    <span class="variable">data</span>: <span class="variable">chat</span>.<span class="variable">xport</span>()
+                });
+            });
+        }
+    }
+    <span class="keyword">else</span>
+        <span class="keyword">return</span> <span class="variable">true</span>;
+}
+
+<span class="keyword">function</span> <span class="variable">getDirectsFromString</span>(<span class="variable">chatText</span>) {
+    <span class="keyword">var</span> <span class="variable">directIndex</span>, <span class="variable">direct</span>, <span class="variable">endPos</span>;
+    <span class="keyword">if</span>(<span class="variable">chatText</span>[<span class="number integer">0</span>] === <span class="string">'@'</span>)
+        <span class="variable">directIndex</span> = <span class="number integer">0</span>;
+    <span class="keyword">else</span>
+        <span class="variable">directIndex</span> = <span class="variable">chatText</span>.<span class="variable">indexOf</span>(<span class="string">' @'</span>);
+
+    <span class="keyword">if</span> ((<span class="variable">directIndex</span> &<span class="variable">gt</span>; -<span class="number integer">1</span>) &<span class="variable">amp</span>;&<span class="variable">amp</span>; (<span class="variable">chatText</span>[<span class="variable">directIndex</span> + <span class="number integer">2</span>] !== <span class="string">' '</span>)) {
+        <span class="variable">endPos</span> = <span class="variable">chatText</span>.<span class="variable">indexOf</span>(<span class="string">' '</span>, <span class="variable">directIndex</span>+<span class="number integer">1</span>);
+        <span class="variable">direct</span> = <span class="variable">chatText</span>.<span class="variable">substring</span>(<span class="variable">directIndex</span>+<span class="number integer">1</span>, <span class="variable">endPos</span>).<span class="variable">toLowerCase</span>();
+        <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'Found direct: '</span> + <span class="variable">direct</span>);
+    }
+
+    <span class="keyword">return</span> <span class="variable">direct</span>;
+}
+
+<span class="comment">//Handles MashTag creation and notification</span>
+<span class="comment">//TODO - refactor to use CPS</span>
+<span class="keyword">function</span> <span class="variable">handleMashTags</span>(<span class="variable">chat</span>, <span class="variable">user</span>) {
+    <span class="keyword">if</span>(!<span class="variable">user</span>) {
+        <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'[handleMashTags] user is null'</span>);
+        <span class="keyword">return</span>;
+    }
+
+    <span class="keyword">var</span> <span class="variable">mashTags</span> = <span class="variable">mashlib</span>.<span class="variable">getChunksFromString</span>(<span class="variable">chat</span>.<span class="variable">get</span>(<span class="string">'text'</span>), <span class="string">'#'</span>);
+    <span class="keyword">if</span>(<span class="variable">mashTags</span>.<span class="variable">length</span> &<span class="variable">gt</span>; <span class="number integer">0</span>) {
+        <span class="keyword">var</span> <span class="variable">alreadyNotifiedUsers</span> = <span class="keyword">new</span> <span class="class">Array</span>(); <span class="comment">//Make sure we only send a multi-tagged chat once</span>
+
+        <span class="keyword">for</span> (<span class="keyword">var</span> <span class="variable">t</span> <span class="keyword">in</span> <span class="variable">mashTags</span>) {
+            <span class="keyword">var</span> <span class="variable">foundTag</span> = <span class="variable">nodeChatModel</span>.<span class="variable">globalMashTags</span>.<span class="variable">find</span>(<span class="keyword">function</span> (<span class="variable">tag</span>) {<span class="keyword">return</span> <span class="variable">tag</span>.<span class="variable">get</span>(<span class="string">'name'</span>) == <span class="variable">mashTags</span>[<span class="variable">t</span>];});
+
+            <span class="comment">//Create a new mashTag if we need to</span>
+            <span class="keyword">if</span> (!<span class="variable">foundTag</span>) {
+                <span class="keyword">var</span> <span class="variable">createTag</span> = <span class="keyword">function</span> (<span class="variable">tagName</span>) {
+                    <span class="variable">rc</span>.<span class="variable">incr</span>(<span class="string">'next.mashtag.id'</span>, <span class="keyword">function</span> (<span class="variable">err</span>, <span class="variable">newMashId</span>) {
+                        <span class="variable">foundTag</span> = <span class="keyword">new</span> <span class="variable">models</span>.<span class="class">MashTagModel</span>({<span class="string">'id'</span>: <span class="variable">newMashId</span>, <span class="string">'name'</span>: <span class="variable">tagName</span>});
+
+                        <span class="comment">//Add the tag to the global list, the users list (since they submitted it), and the chat message. Then add subcribe the user</span>
+                        <span class="comment">//to the mash tag.</span>
+                        <span class="variable">nodeChatModel</span>.<span class="variable">globalMashTags</span>.<span class="variable">add</span>(<span class="variable">foundTag</span>);
+                        <span class="variable">foundTag</span>.<span class="variable">watchingUsers</span>.<span class="variable">add</span>(<span class="variable">user</span>);
+
+                        <span class="variable">addMashTagToStore</span>(<span class="variable">foundTag</span>);
+                        <span class="variable">sendMashTagsToUser</span>(<span class="variable">user</span>, <span class="variable">foundTag</span>);
+                        <span class="variable">broadcastGlobalMashTag</span>(<span class="variable">foundTag</span>);
+                        <span class="variable">saveMashtagForUser</span>(<span class="variable">user</span>, <span class="variable">foundTag</span>);
+
+                        <span class="variable">notifySubscribedMashTagUsers</span>(<span class="variable">chat</span>,<span class="variable">foundTag</span>, <span class="variable">alreadyNotifiedUsers</span>);
+                    });
+                };
+                <span class="variable">createTag</span>(<span class="variable">mashTags</span>[<span class="variable">t</span>]);
+            } 
+            <span class="keyword">else</span> {
+                <span class="comment">//In the case the tag exists, check to see if the submitting user is watching it</span>
+                <span class="keyword">if</span>(!<span class="variable">foundTag</span>.<span class="variable">watchingUsers</span>.<span class="variable">some</span>(<span class="keyword">function</span> (<span class="variable">u</span>) { <span class="keyword">return</span> <span class="variable">u</span> == <span class="variable">user</span>; })) { 
+                    <span class="variable">foundTag</span>.<span class="variable">watchingUsers</span>.<span class="variable">add</span>(<span class="variable">user</span>);
+
+                    <span class="variable">sendMashTagsToUser</span>(<span class="variable">user</span>, <span class="variable">foundTag</span>);
+                    <span class="variable">saveMashtagForUser</span>(<span class="variable">user</span>, <span class="variable">foundTag</span>);
+                }
+
+                <span class="comment">//Notify all the subscribed users</span>
+                <span class="variable">notifySubscribedMashTagUsers</span>(<span class="variable">chat</span>, <span class="variable">foundTag</span>, <span class="variable">alreadyNotifiedUsers</span>);
+            }
+        }
+
+        <span class="keyword">return</span> <span class="variable">true</span>;
+    }
+    <span class="keyword">else</span> {
+        <span class="keyword">return</span> <span class="variable">true</span>;
+    }
+}
+
+<span class="keyword">function</span> <span class="variable">addMashTagToStore</span>(<span class="variable">mashTag</span>) {
+    <span class="keyword">if</span>(!<span class="variable">mashTag</span>) {
+        <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'[addMashTagToStore] called without valid tag.'</span>);
+        <span class="keyword">return</span>;
+    }
+
+    <span class="keyword">var</span> <span class="variable">rKey</span> = <span class="string">'mashtags'</span>;
+
+    <span class="variable">rc</span>.<span class="variable">sadd</span>(<span class="variable">rKey</span>, <span class="variable">mashTag</span>.<span class="variable">xport</span>({<span class="variable">recurse</span>: <span class="variable">false</span>}), <span class="keyword">function</span> (<span class="variable">err</span>,<span class="variable">data</span>) {
+        <span class="keyword">if</span> (<span class="variable">err</span>) <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'[addMashTagToStore] SADD failed for key: '</span> + <span class="variable">rKey</span> + <span class="string">' and value: '</span>);
+        <span class="keyword">else</span> <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'[addMashTagToStore] SADD succeeded for key: '</span> + <span class="variable">rKey</span> + <span class="string">' and value: '</span>); 
+    });
+}
+
+<span class="comment">//Helper function to persist a tag subscription for a user</span>
+<span class="keyword">function</span> <span class="variable">saveMashtagForUser</span>(<span class="variable">user</span>, <span class="variable">mashTag</span>) {
+    <span class="keyword">if</span>(!<span class="variable">mashTag</span>) {
+        <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'[saveMashtagForUser] called without valid tag.'</span>);
+        <span class="keyword">return</span>;
+    }
+
+    <span class="keyword">var</span> <span class="variable">rKey</span> = <span class="string">'user:'</span> + <span class="variable">user</span>.<span class="variable">get</span>(<span class="string">'name'</span>) + <span class="string">'.mashtags'</span>;
+
+    <span class="variable">rc</span>.<span class="variable">sismember</span>(<span class="variable">rKey</span>, <span class="variable">mashTag</span>.<span class="variable">id</span>, <span class="keyword">function</span> (<span class="variable">err</span>, <span class="variable">data</span>) {
+        <span class="keyword">if</span> (<span class="variable">err</span>) <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'SISMEMBER failed for key: '</span> + <span class="variable">rKey</span> + <span class="string">' and value: '</span> + <span class="variable">mashTag</span>.<span class="variable">id</span>);
+        <span class="keyword">else</span> <span class="keyword">if</span> (<span class="variable">data</span> == <span class="string">'0'</span>) {
+            <span class="variable">rc</span>.<span class="variable">sadd</span>(<span class="variable">rKey</span>, <span class="variable">mashTag</span>.<span class="variable">id</span>, <span class="keyword">function</span> (<span class="variable">err</span>, <span class="variable">data</span>) {
+                <span class="keyword">if</span> (<span class="variable">err</span>) <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'SADD failed for key: '</span> + <span class="variable">rKey</span> + <span class="string">' and value: '</span> + <span class="variable">mashTag</span>.<span class="variable">id</span>);
+                <span class="keyword">else</span> <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'SADD succeeded for key: '</span> + <span class="variable">rKey</span> + <span class="string">' and value: '</span> + <span class="variable">mashTag</span>.<span class="variable">id</span>);
+            });
+        }
+        <span class="keyword">else</span> <span class="keyword">if</span> (<span class="variable">data</span> == <span class="string">'1'</span>) {
+            <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'Value: '</span> + <span class="variable">mashTag</span>.<span class="variable">id</span> + <span class="string">' already exists for key: '</span>+ <span class="variable">rKey</span>);
+        }
+    });
+}
+
+<span class="comment">//Helper function to remove tag subscription for a user</span>
+<span class="keyword">function</span> <span class="variable">deleteMashtagForUser</span>(<span class="variable">user</span>, <span class="variable">mashTag</span>) {
+    <span class="keyword">var</span> <span class="variable">rKey</span> = <span class="string">'user:'</span> + <span class="variable">user</span>.<span class="variable">get</span>(<span class="string">'name'</span>) + <span class="string">'.mashtags'</span>;
+
+    <span class="variable">rc</span>.<span class="variable">srem</span>(<span class="variable">rKey</span>, <span class="variable">mashTag</span>.<span class="variable">id</span>, <span class="keyword">function</span> (<span class="variable">err</span>, <span class="variable">data</span>) {
+        <span class="keyword">if</span> (<span class="variable">err</span>) <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'SREM failed for key: '</span> + <span class="variable">rKey</span> + <span class="string">' and value: '</span> + <span class="variable">mashTag</span>.<span class="variable">id</span>);
+        <span class="keyword">else</span> <span class="keyword">if</span> (<span class="variable">data</span> == <span class="string">'1'</span>)
+            <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'SREM succeeded for key: '</span> + <span class="variable">rKey</span> + <span class="string">' and value: '</span> + <span class="variable">mashTag</span>.<span class="variable">id</span>);
+        <span class="keyword">else</span> 
+            <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'SREM could not find value for key: '</span> + <span class="variable">rKey</span> + <span class="string">' and value: '</span> + <span class="variable">mashTag</span>.<span class="variable">id</span>);
+    });
+}
+
+<span class="comment">//Helper function to send tags to a user</span>
+<span class="keyword">function</span> <span class="variable">broadcastGlobalMashTag</span>(<span class="variable">mashTag</span>) {
+    <span class="variable">socket</span>.<span class="variable">broadcast</span>({
+        <span class="variable">event</span>: <span class="string">'globalmashtag'</span>,
+        <span class="variable">data</span>: <span class="variable">mashTag</span>.<span class="variable">xport</span>({<span class="variable">recurse</span>: <span class="variable">false</span>})
+    });
+}
+
+<span class="comment">//Helper function to send tags to a user</span>
+<span class="keyword">function</span> <span class="variable">sendMashTagsToUser</span>(<span class="variable">user</span>, <span class="variable">mashTag</span>) {
+    <span class="variable">_</span>.<span class="variable">each</span>(<span class="variable">user</span>.<span class="variable">clientList</span>, <span class="keyword">function</span> (<span class="variable">client</span>) { 
+        <span class="variable">client</span>.<span class="variable">send</span>({
+            <span class="variable">event</span>: <span class="string">'mashtag'</span>,
+            <span class="variable">data</span>: <span class="variable">mashTag</span>.<span class="variable">xport</span>({<span class="variable">recurse</span>: <span class="variable">false</span>})
+        });
+    });
+}
+
+<span class="comment">//Look for unsubscription notifications</span>
+<span class="keyword">function</span> <span class="variable">checkForMashTagUnSub</span>(<span class="variable">chat</span>, <span class="variable">user</span>) {
+    <span class="keyword">var</span> <span class="variable">mashTagsToRemove</span> = <span class="variable">mashlib</span>.<span class="variable">getChunksFromString</span>(<span class="variable">chat</span>.<span class="variable">get</span>(<span class="string">'text'</span>), <span class="string">'-'</span>);
+    <span class="keyword">if</span>(<span class="variable">mashTagsToRemove</span>.<span class="variable">length</span> &<span class="variable">gt</span>; <span class="number integer">0</span>) {
+        <span class="keyword">for</span> (<span class="keyword">var</span> <span class="variable">t</span> <span class="keyword">in</span> <span class="variable">mashTagsToRemove</span>) {
+            <span class="keyword">var</span> <span class="variable">foundTag</span> = <span class="variable">nodeChatModel</span>.<span class="variable">globalMashTags</span>.<span class="variable">find</span>(<span class="keyword">function</span> (<span class="variable">tag</span>) {<span class="keyword">return</span> <span class="variable">tag</span>.<span class="variable">get</span>(<span class="string">'name'</span>) == <span class="variable">mashTagsToRemove</span>[<span class="variable">t</span>];});
+
+            <span class="comment">//Try and remove it from redis whether we found it or not, in case of sync issues</span>
+            <span class="variable">deleteMashtagForUser</span>(<span class="variable">user</span>, <span class="variable">mashTagsToRemove</span>[<span class="variable">t</span>]);
+
+            <span class="keyword">if</span> (<span class="variable">foundTag</span>) {
+                <span class="variable">foundTag</span>.<span class="variable">watchingUsers</span>.<span class="variable">remove</span>(<span class="variable">user</span>);
+
+                <span class="comment">//Notify client that tag was unsub'd</span>
+                <span class="variable">_</span>.<span class="variable">each</span>(<span class="variable">user</span>.<span class="variable">clientList</span>, <span class="keyword">function</span> (<span class="variable">client</span>) { 
+                   <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'notified client '</span> + <span class="variable">client</span>.<span class="variable">sessionId</span>); 
+                    <span class="variable">client</span>.<span class="variable">send</span>({
+                        <span class="variable">event</span>: <span class="string">'mashtag:delete'</span>,
+                        <span class="variable">data</span>: <span class="variable">foundTag</span>.<span class="variable">xport</span>({<span class="variable">recurse</span>: <span class="variable">false</span>})
+                    });
+                });
+            }
+        }
+        <span class="keyword">return</span> <span class="variable">false</span>;
+    }
+
+    <span class="keyword">return</span> <span class="variable">true</span>;
+}
+
+<span class="comment">//Send the chat to all currently subscribed users for a mashTag</span>
+<span class="keyword">function</span> <span class="variable">notifySubscribedMashTagUsers</span>(<span class="variable">chat</span>, <span class="variable">mashTag</span>, <span class="variable">doNotNotifyList</span>) {
+    <span class="variable">mashTag</span>.<span class="variable">watchingUsers</span>.<span class="variable">forEach</span>(<span class="keyword">function</span> (<span class="variable">user</span>) {
+        <span class="keyword">if</span> (<span class="variable">doNotNotifyList</span>[<span class="variable">user</span>.<span class="variable">get</span>(<span class="string">'name'</span>)]) <span class="keyword">return</span>;
+
+        <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'[notifySubscribedMashTagUsers] notifying user: '</span> + <span class="variable">user</span>.<span class="variable">get</span>(<span class="string">'name'</span>) + <span class="string">' for chat: '</span> + <span class="variable">chat</span>.<span class="variable">xport</span>());
+        <span class="variable">_</span>.<span class="variable">each</span>(<span class="variable">user</span>.<span class="variable">clientList</span>, <span class="keyword">function</span> (<span class="variable">client</span>) { 
+            <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'[notifySubscribedMashTagUsers] client send for user: '</span> + <span class="variable">user</span>.<span class="variable">get</span>(<span class="string">'name'</span>) + <span class="string">' for client: '</span> + <span class="variable">client</span>.<span class="variable">sessionId</span>);
+            <span class="variable">client</span>.<span class="variable">send</span>({
+                <span class="variable">event</span>: <span class="string">'mash'</span>,
+                <span class="variable">data</span>: <span class="variable">chat</span>.<span class="variable">xport</span>()
+            });
+        });
+
+        <span class="comment">//Add the user to do not call list so they only get one copy</span>
+        <span class="variable">doNotNotifyList</span>[<span class="variable">user</span>.<span class="variable">get</span>(<span class="string">'name'</span>)] = <span class="number integer">1</span>;
+    });
+}</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<p>Event handler for client disconnects. Simply broadcasts the new active client count.</p>
+
+<h2></h2>
+
+<ul><li><p><strong>param</strong>: <em>object</em>  client</p></li></ul>
+</td>
+<td class="code">
+<pre><code><span class="keyword">function</span> <span class="variable">clientDisconnect</span>(<span class="variable">client</span>, <span class="variable">next</span>) {
+    <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'Client disconnecting: '</span> + <span class="variable">client</span>.<span class="variable">sessionId</span>);
+
+    <span class="variable">next</span>();
+}</code></pre>
+</td>
+</tr>
+<tr class="code">
+<td class="docs">
+<p>Open a config file (currently empty) to see if we are on a server
+ </p>
+</td>
+<td class="code">
+<pre><code><span class="variable">path</span>.<span class="variable">exists</span>(<span class="variable">config_file</span>, <span class="keyword">function</span> (<span class="variable">exists</span>) {
+    <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'Attempting to use config at '</span> + <span class="variable">config_file</span>);
+    <span class="keyword">if</span> (!<span class="variable">exists</span>) {
+        <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'no config found. starting in local dev mode'</span>);
+        <span class="variable">app</span>.<span class="variable">listen</span>(<span class="variable">dev_port</span>);
+        <span class="keyword">var</span> <span class="variable">port</span> = <span class="variable">dev_port</span>;
+
+        <span class="comment">//Hack, delete the old css. For some reason the middleware is not recompiling</span>
+        <span class="variable">fs</span>.<span class="variable">unlink</span>(<span class="string">'./public/main.css'</span>, <span class="keyword">function</span> (<span class="variable">err</span>) {
+            <span class="keyword">if</span> (<span class="variable">err</span>) <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'Unlink failed for ./public/main.css: '</span> + <span class="variable">err</span>);
+            <span class="keyword">else</span> <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'Unlinked ./public/main.css'</span>);
+        });
+
+        <span class="keyword">var</span> <span class="variable">options</span> = {
+          <span class="variable">host</span>: <span class="string">'localhost'</span>,
+          <span class="variable">port</span>: <span class="variable">port</span>,
+          <span class="variable">path</span>: <span class="string">'/main.css'</span>
+        }
+
+        <span class="variable">http</span>.<span class="variable">get</span>(<span class="variable">options</span>, <span class="keyword">function</span> (<span class="variable">res</span>) {<span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'GET main.css complete'</span>)});
+    }
+    <span class="keyword">else</span> {
+        <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'config found. starting in server mode'</span>);
+        <span class="variable">app</span>.<span class="variable">listen</span>(<span class="variable">server_port</span>);
+        <span class="keyword">var</span> <span class="variable">port</span> = <span class="variable">server_port</span>;
+    }
+
+    <span class="variable">console</span>.<span class="variable">log</span>(<span class="string">'listening on port '</span> + <span class="variable">port</span>);
+
+    <span class="variable">app</span>.<span class="variable">get</span>(<span class="string">'/'</span>, <span class="variable">restrict</span>, <span class="keyword">function</span> (<span class="variable">req</span>, <span class="variable">res</span>) {
+        <span class="variable">res</span>.<span class="variable">render</span>(<span class="string">'index'</span>, {
+            <span class="variable">locals</span>: { <span class="variable">name</span>: <span class="variable">req</span>.<span class="variable">session</span>.<span class="variable">user</span>.<span class="variable">name</span>, <span class="variable">port</span>: <span class="variable">port</span>, <span class="variable">hash</span>: <span class="class">JSON</span>.<span class="variable">stringify</span>(<span class="variable">req</span>.<span class="variable">session</span>.<span class="variable">hash</span>) }
+        });
+    });
+});
+
+</code></pre>
+</td>
+</tr>	</body>
+</html></tbody></table>
