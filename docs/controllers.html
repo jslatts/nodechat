@@ -1,0 +1,152 @@
+<!DOCTYPE html>  <html> <head>   <title>controllers.js</title>   <meta http-equiv="content-type" content="text/html; charset=UTF-8">   <link rel="stylesheet" media="all" href="docco.css" /> </head> <body>   <div id="container">     <div id="background"></div>            <div id="jump_to">         Jump To &hellip;         <div id="jump_wrapper">           <div id="jump_page">                                           <a class="source" href="controllers.html">                 controllers.js               </a>                                           <a class="source" href="auth.html">                 auth.js               </a>                                           <a class="source" href="backbone.html">                 backbone.js               </a>                                           <a class="source" href="io.html">                 io.js               </a>                                           <a class="source" href="jquery-1.5.1.html">                 jquery-1.5.1.js               </a>                                           <a class="source" href="mashlib.html">                 mashlib.js               </a>                                           <a class="source" href="ncutils.html">                 ncutils.js               </a>                                           <a class="source" href="socket.io.html">                 socket.io.js               </a>                                           <a class="source" href="socket.html">                 socket.js               </a>                                           <a class="source" href="transport.html">                 transport.js               </a>                                           <a class="source" href="underscore.html">                 underscore.js               </a>                                           <a class="source" href="util.html">                 util.js               </a>                                           <a class="source" href="models.html">                 models.js               </a>                                           <a class="source" href="views.html">                 views.js               </a>                        </div>         </div>       </div>          <table cellpadding="0" cellspacing="0">       <thead>         <tr>           <th class="docs">             <h1>               controllers.js             </h1>           </th>           <th class="code">           </th>         </tr>       </thead>       <tbody>                               <tr id="section-1">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-1">&#182;</a>               </div>                            </td>             <td class="code">               <div class="highlight"><pre><span class="cm">/*!</span>
+<span class="cm"> * controllers.js</span>
+<span class="cm"> * Copyright(c) 2011 Justin Slattery &lt;justin.slattery@fzysqr.com&gt; </span>
+<span class="cm"> * MIT Licensed</span>
+<span class="cm"> */</span>
+
+<span class="cm">/*</span>
+<span class="cm"> * Sets up master view for &#39;/&#39; page.</span>
+<span class="cm"> *</span>
+<span class="cm"> *  - Store passed hash value</span>
+<span class="cm"> *  - Create app level model and view</span>
+<span class="cm"> *  - Initialize socket.io connection back to server</span>
+<span class="cm"> *  - Define socket.io message routing</span>
+<span class="cm"> */</span>
+<span class="nx">NodeChatController</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="nx">init</span><span class="o">:</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">options</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">mySocket</span><span class="p">,</span> <span class="nx">hash</span><span class="p">,</span> <span class="nx">view</span><span class="p">,</span> <span class="nx">trying</span><span class="p">,</span> <span class="nx">connected</span><span class="p">;</span>
+
+        <span class="k">this</span><span class="p">.</span><span class="nx">socket</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">io</span><span class="p">.</span><span class="nx">Socket</span><span class="p">(</span><span class="kc">null</span><span class="p">,</span> <span class="p">{</span><span class="nx">port</span><span class="o">:</span> <span class="nx">options</span><span class="p">.</span><span class="nx">port</span>
+            <span class="p">,</span> <span class="nx">transports</span><span class="o">:</span> <span class="p">[</span><span class="s1">&#39;websocket&#39;</span><span class="p">,</span> <span class="s1">&#39;flashsocket&#39;</span><span class="p">,</span> <span class="s1">&#39;xhr-multipart&#39;</span><span class="p">,</span> <span class="s1">&#39;htmlfile&#39;</span><span class="p">]</span>
+            <span class="p">,</span> <span class="nx">rememberTransport</span><span class="o">:</span> <span class="kc">false</span>
+            <span class="p">,</span> <span class="nx">tryTransportsOnConnectTimeout</span><span class="o">:</span> <span class="kc">false</span> 
+        <span class="p">});</span>
+
+        <span class="nx">mySocket</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">socket</span><span class="p">;</span>
+
+        <span class="k">this</span><span class="p">.</span><span class="nx">hash</span> <span class="o">=</span> <span class="nx">options</span><span class="p">.</span><span class="nx">hash</span><span class="p">;</span>
+        <span class="nx">hash</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">hash</span><span class="p">;</span>
+        <span class="nx">log</span><span class="p">(</span><span class="s1">&#39;hash is &#39;</span> <span class="o">+</span> <span class="nx">options</span><span class="p">.</span><span class="nx">hash</span><span class="p">);</span>
+
+
+        <span class="k">this</span><span class="p">.</span><span class="nx">model</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">models</span><span class="p">.</span><span class="nx">NodeChatModel</span><span class="p">();</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">view</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">NodeChatView</span><span class="p">({</span><span class="nx">model</span><span class="o">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">model</span><span class="p">,</span> <span class="nx">socket</span><span class="o">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">socket</span><span class="p">,</span> <span class="nx">el</span><span class="o">:</span> <span class="nx">$</span><span class="p">(</span><span class="s1">&#39;#content&#39;</span><span class="p">),</span> <span class="nx">userName</span><span class="o">:</span> <span class="nx">options</span><span class="p">.</span><span class="nx">userName</span><span class="p">});</span>
+        <span class="nx">view</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">view</span><span class="p">;</span>
+        <span class="nx">connected</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span>
+
+
+        <span class="k">this</span><span class="p">.</span><span class="nx">socket</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">&#39;connect&#39;</span><span class="p">,</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span> 
+            <span class="nx">mySocket</span><span class="p">.</span><span class="nx">send</span><span class="p">({</span>
+                <span class="nx">event</span><span class="o">:</span> <span class="s1">&#39;clientauthrequest&#39;</span><span class="p">,</span>
+                <span class="nx">data</span><span class="o">:</span> <span class="nx">hash</span>
+            <span class="p">});</span>
+            <span class="nx">log</span><span class="p">(</span><span class="s1">&#39;hash is &#39;</span> <span class="o">+</span> <span class="nx">hash</span><span class="p">);</span>
+
+            <span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Connected! Oh hai!&#39;</span><span class="p">);</span>
+            <span class="nx">connected</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+            <span class="nx">view</span><span class="p">.</span><span class="nx">setConnected</span><span class="p">(</span><span class="kc">true</span><span class="p">);</span>
+        <span class="p">});</span> 
+
+        <span class="nx">nodeChatController</span> <span class="o">=</span> <span class="k">this</span><span class="p">;</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">socket</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">&#39;message&#39;</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">msg</span><span class="p">)</span> <span class="p">{</span> 
+            <span class="nx">nodeChatController</span><span class="p">.</span><span class="nx">msgReceived</span><span class="p">(</span><span class="nx">msg</span><span class="p">);</span> 
+        <span class="p">});</span>
+
+        <span class="kd">function</span> <span class="nx">tryconnect</span><span class="p">()</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">connected</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Trying to reconnect...&#39;</span><span class="p">);</span>
+                <span class="nx">mySocket</span><span class="p">.</span><span class="nx">connect</span><span class="p">();</span>
+                <span class="nx">clearTimeout</span><span class="p">(</span><span class="nx">trying</span><span class="p">);</span>
+                <span class="nx">trying</span> <span class="o">=</span> <span class="nx">setTimeout</span><span class="p">(</span><span class="nx">tryconnect</span><span class="p">,</span> <span class="mi">30000</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-2">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-2">&#182;</a>               </div>               <p>Try and reconnect if we get disconnected</p>             </td>             <td class="code">               <div class="highlight"><pre>        <span class="k">this</span><span class="p">.</span><span class="nx">socket</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">&#39;disconnect&#39;</span><span class="p">,</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+            <span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Disconnected from nodechat. Oh noes!&#39;</span><span class="p">);</span>
+            <span class="nx">connected</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span>
+            <span class="nx">view</span><span class="p">.</span><span class="nx">setConnected</span><span class="p">(</span><span class="kc">false</span><span class="p">);</span>
+            <span class="nx">trying</span> <span class="o">=</span> <span class="nx">setTimeout</span><span class="p">(</span><span class="nx">tryconnect</span><span class="p">,</span> <span class="mi">500</span><span class="p">);</span>
+        <span class="p">});</span>
+        
+        <span class="k">this</span><span class="p">.</span><span class="nx">socket</span><span class="p">.</span><span class="nx">connect</span><span class="p">();</span>
+
+        <span class="k">this</span><span class="p">.</span><span class="nx">view</span><span class="p">.</span><span class="nx">render</span><span class="p">();</span>
+
+        <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="p">,</span> <span class="nx">msgReceived</span><span class="o">:</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">message</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">switch</span> <span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">event</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">case</span> <span class="s1">&#39;initial&#39;</span><span class="o">:</span>
+                <span class="k">this</span><span class="p">.</span><span class="nx">model</span><span class="p">.</span><span class="nx">mport</span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
+                <span class="k">break</span><span class="p">;</span>
+            <span class="k">case</span> <span class="s1">&#39;chat&#39;</span><span class="o">:</span></pre></div>             </td>           </tr>                               <tr id="section-3">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-3">&#182;</a>               </div>               <pre><code>           log('chat received: ' + message.data );
+</code></pre>             </td>             <td class="code">               <div class="highlight"><pre>                <span class="kd">var</span> <span class="nx">newChatEntry</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">models</span><span class="p">.</span><span class="nx">ChatEntry</span><span class="p">();</span>
+                <span class="nx">newChatEntry</span><span class="p">.</span><span class="nx">mport</span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
+                <span class="k">this</span><span class="p">.</span><span class="nx">model</span><span class="p">.</span><span class="nx">chats</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">newChatEntry</span><span class="p">);</span>
+                <span class="k">break</span><span class="p">;</span>
+
+            <span class="k">case</span> <span class="s1">&#39;mash&#39;</span><span class="o">:</span>
+                <span class="nx">log</span><span class="p">(</span><span class="s1">&#39;mash received: &#39;</span> <span class="o">+</span> <span class="nx">message</span><span class="p">.</span><span class="nx">data</span> <span class="p">);</span>
+                <span class="kd">var</span> <span class="nx">mashEntry</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">models</span><span class="p">.</span><span class="nx">ChatEntry</span><span class="p">();</span>
+                <span class="nx">mashEntry</span><span class="p">.</span><span class="nx">mport</span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
+                <span class="k">this</span><span class="p">.</span><span class="nx">model</span><span class="p">.</span><span class="nx">mashes</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">mashEntry</span><span class="p">);</span>
+                <span class="k">break</span><span class="p">;</span>
+
+            <span class="k">case</span> <span class="s1">&#39;user:add&#39;</span><span class="o">:</span>
+                <span class="nx">log</span><span class="p">(</span><span class="s1">&#39;user add received: &#39;</span> <span class="o">+</span> <span class="nx">message</span><span class="p">.</span><span class="nx">data</span> <span class="p">);</span>
+                <span class="kd">var</span> <span class="nx">user</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">models</span><span class="p">.</span><span class="nx">User</span><span class="p">();</span>
+                <span class="nx">user</span><span class="p">.</span><span class="nx">mport</span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span></pre></div>             </td>           </tr>                               <tr id="section-4">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-4">&#182;</a>               </div>               <p>In case of refresh/socket/whatever bugs, only add a user once</p>             </td>             <td class="code">               <div class="highlight"><pre>                <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="k">this</span><span class="p">.</span><span class="nx">model</span><span class="p">.</span><span class="nx">users</span><span class="p">.</span><span class="nx">some</span><span class="p">(</span><span class="kd">function</span> <span class="p">(</span><span class="nx">u</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="nx">u</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">).</span><span class="nx">toLowerCase</span><span class="p">()</span> <span class="o">==</span> <span class="nx">user</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">).</span><span class="nx">toLowerCase</span><span class="p">();</span> <span class="p">}))</span>
+                    <span class="k">this</span><span class="p">.</span><span class="nx">model</span><span class="p">.</span><span class="nx">users</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">user</span><span class="p">);</span>
+                <span class="k">break</span><span class="p">;</span>
+
+            <span class="k">case</span> <span class="s1">&#39;user:remove&#39;</span><span class="o">:</span>
+                <span class="nx">log</span><span class="p">(</span><span class="s1">&#39;user:remove received: &#39;</span> <span class="o">+</span> <span class="nx">message</span><span class="p">.</span><span class="nx">data</span> <span class="p">);</span>
+                <span class="kd">var</span> <span class="nx">sUser</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">models</span><span class="p">.</span><span class="nx">User</span><span class="p">();</span>
+                <span class="nx">sUser</span><span class="p">.</span><span class="nx">mport</span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span></pre></div>             </td>           </tr>                               <tr id="section-5">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-5">&#182;</a>               </div>               <p>Because we don't have the actual model, find anything with the same name and remove it</p>             </td>             <td class="code">               <div class="highlight"><pre>                <span class="kd">var</span> <span class="nx">users</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">model</span><span class="p">.</span><span class="nx">users</span><span class="p">.</span><span class="nx">filter</span><span class="p">(</span><span class="kd">function</span> <span class="p">(</span><span class="nx">u</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="nx">u</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">).</span><span class="nx">toLowerCase</span><span class="p">()</span> <span class="o">==</span> <span class="nx">sUser</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">).</span><span class="nx">toLowerCase</span><span class="p">();</span> <span class="p">});</span>
+                <span class="k">this</span><span class="p">.</span><span class="nx">model</span><span class="p">.</span><span class="nx">users</span><span class="p">.</span><span class="nx">remove</span><span class="p">(</span><span class="nx">users</span><span class="p">);</span>
+                <span class="k">break</span><span class="p">;</span>
+
+            <span class="k">case</span> <span class="s1">&#39;mashtag&#39;</span><span class="o">:</span>
+                <span class="nx">log</span><span class="p">(</span><span class="s1">&#39;mashtag received: &#39;</span> <span class="o">+</span> <span class="nx">message</span><span class="p">.</span><span class="nx">data</span> <span class="p">);</span>
+                <span class="kd">var</span> <span class="nx">newMashTag</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">models</span><span class="p">.</span><span class="nx">MashTagModel</span><span class="p">();</span>
+                <span class="nx">newMashTag</span><span class="p">.</span><span class="nx">mport</span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
+                <span class="k">this</span><span class="p">.</span><span class="nx">model</span><span class="p">.</span><span class="nx">mashTags</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">newMashTag</span><span class="p">);</span>
+                <span class="k">break</span><span class="p">;</span>
+
+            <span class="k">case</span> <span class="s1">&#39;mashtag:delete&#39;</span><span class="o">:</span>
+                <span class="nx">log</span><span class="p">(</span><span class="s1">&#39;mashtag:delete received for id: &#39;</span> <span class="o">+</span> <span class="nx">message</span><span class="p">.</span><span class="nx">data</span> <span class="p">);</span>
+                <span class="kd">var</span> <span class="nx">mashTagToDelete</span>  <span class="o">=</span> <span class="k">new</span> <span class="nx">models</span><span class="p">.</span><span class="nx">MashTagModel</span><span class="p">();</span>
+                <span class="nx">mashTagToDelete</span><span class="p">.</span><span class="nx">mport</span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
+                <span class="k">this</span><span class="p">.</span><span class="nx">model</span><span class="p">.</span><span class="nx">mashTags</span><span class="p">.</span><span class="nx">remove</span><span class="p">(</span><span class="nx">mashTagToDelete</span><span class="p">);</span>
+                <span class="k">break</span><span class="p">;</span>
+
+            <span class="k">case</span> <span class="s1">&#39;globalmashtag&#39;</span><span class="o">:</span>
+                <span class="nx">log</span><span class="p">(</span><span class="s1">&#39;globalmashtag received: &#39;</span> <span class="o">+</span> <span class="nx">message</span><span class="p">.</span><span class="nx">data</span> <span class="p">);</span>
+                <span class="kd">var</span> <span class="nx">newMashTag</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">models</span><span class="p">.</span><span class="nx">MashTagModel</span><span class="p">();</span>
+                <span class="nx">newMashTag</span><span class="p">.</span><span class="nx">mport</span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
+                <span class="k">this</span><span class="p">.</span><span class="nx">model</span><span class="p">.</span><span class="nx">globalMashTags</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">newMashTag</span><span class="p">);</span>
+                <span class="k">break</span><span class="p">;</span>
+
+            <span class="k">case</span> <span class="s1">&#39;globalmashtag:delete&#39;</span><span class="o">:</span>
+                <span class="nx">log</span><span class="p">(</span><span class="s1">&#39;globalmashtag:delete received for id: &#39;</span> <span class="o">+</span> <span class="nx">message</span><span class="p">.</span><span class="nx">data</span> <span class="p">);</span>
+                <span class="kd">var</span> <span class="nx">mashTagToDelete</span>  <span class="o">=</span> <span class="k">new</span> <span class="nx">models</span><span class="p">.</span><span class="nx">MashTagModel</span><span class="p">();</span>
+                <span class="nx">mashTagToDelete</span><span class="p">.</span><span class="nx">mport</span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
+                <span class="k">this</span><span class="p">.</span><span class="nx">model</span><span class="p">.</span><span class="nx">globalMashTags</span><span class="p">.</span><span class="nx">remove</span><span class="p">(</span><span class="nx">mashTagToDelete</span><span class="p">);</span>
+                <span class="k">break</span><span class="p">;</span>
+
+            <span class="k">case</span> <span class="s1">&#39;direct&#39;</span><span class="o">:</span>
+                <span class="nx">log</span><span class="p">(</span><span class="s1">&#39;direct received: &#39;</span> <span class="o">+</span> <span class="nx">message</span><span class="p">.</span><span class="nx">data</span> <span class="p">);</span>
+                <span class="kd">var</span> <span class="nx">newDirect</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">models</span><span class="p">.</span><span class="nx">ChatEntry</span><span class="p">();</span>
+                <span class="nx">newDirect</span><span class="p">.</span><span class="nx">mport</span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
+                <span class="k">this</span><span class="p">.</span><span class="nx">model</span><span class="p">.</span><span class="nx">directs</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="nx">newDirect</span><span class="p">);</span>
+
+                <span class="k">break</span><span class="p">;</span>
+
+            <span class="k">case</span> <span class="s1">&#39;disconnect&#39;</span><span class="o">:</span>
+                <span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Received disconnect from server&#39;</span><span class="p">);</span>
+                <span class="nb">window</span><span class="p">.</span><span class="nx">location</span> <span class="o">=</span> <span class="s1">&#39;/disconnect&#39;</span><span class="p">;</span>
+                <span class="k">break</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">};</span>
+
+</pre></div>             </td>           </tr>                </tbody>     </table>   </div> </body> </html> 

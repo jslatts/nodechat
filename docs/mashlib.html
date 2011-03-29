@@ -1,0 +1,79 @@
+<!DOCTYPE html>  <html> <head>   <title>mashlib.js</title>   <meta http-equiv="content-type" content="text/html; charset=UTF-8">   <link rel="stylesheet" media="all" href="docco.css" /> </head> <body>   <div id="container">     <div id="background"></div>            <div id="jump_to">         Jump To &hellip;         <div id="jump_wrapper">           <div id="jump_page">                                           <a class="source" href="controllers.html">                 controllers.js               </a>                                           <a class="source" href="auth.html">                 auth.js               </a>                                           <a class="source" href="backbone.html">                 backbone.js               </a>                                           <a class="source" href="io.html">                 io.js               </a>                                           <a class="source" href="jquery-1.5.1.html">                 jquery-1.5.1.js               </a>                                           <a class="source" href="mashlib.html">                 mashlib.js               </a>                                           <a class="source" href="ncutils.html">                 ncutils.js               </a>                                           <a class="source" href="socket.io.html">                 socket.io.js               </a>                                           <a class="source" href="socket.html">                 socket.js               </a>                                           <a class="source" href="transport.html">                 transport.js               </a>                                           <a class="source" href="underscore.html">                 underscore.js               </a>                                           <a class="source" href="util.html">                 util.js               </a>                                           <a class="source" href="models.html">                 models.js               </a>                                           <a class="source" href="views.html">                 views.js               </a>                        </div>         </div>       </div>          <table cellpadding="0" cellspacing="0">       <thead>         <tr>           <th class="docs">             <h1>               mashlib.js             </h1>           </th>           <th class="code">           </th>         </tr>       </thead>       <tbody>                               <tr id="section-1">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-1">&#182;</a>               </div>                            </td>             <td class="code">               <div class="highlight"><pre><span class="cm">/*!</span>
+<span class="cm"> * mashlib.js </span>
+<span class="cm"> * Parses strings for delimiters and returns chunks.</span>
+<span class="cm"> *</span>
+<span class="cm"> * Copyright(c) 2011 Justin Slattery &lt;justin.slattery@fzysqr.com&gt; </span>
+<span class="cm"> * MIT Licensed</span>
+<span class="cm"> */</span>
+
+<span class="cm">/*</span>
+<span class="cm"> * This is a [CommonJS module](http://www.commonjs.org/) so we need to start off with some setup. </span>
+<span class="cm"> *</span>
+<span class="cm"> * Here we are checking to see if this code is included as a module. If it is, we go ahead and include our one dependency, underscore</span>
+<span class="cm"> */</span>
+<span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+<span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">exports</span> <span class="o">!==</span> <span class="s1">&#39;undefined&#39;</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">_</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;underscore&#39;</span><span class="p">).</span><span class="nx">_</span><span class="p">;</span>
+        <span class="nx">mashlib</span> <span class="o">=</span> <span class="nx">exports</span><span class="p">;</span>
+    <span class="p">}</span> 
+    <span class="k">else</span> <span class="p">{</span>
+        <span class="nx">mashlib</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">mashlib</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="p">}</span>
+
+    <span class="cm">/*</span>
+<span class="cm">     * Take a string and look for sections separated by a given delimiter.</span>
+<span class="cm">     *</span>
+<span class="cm">     * @param {string} chatText</span>
+<span class="cm">     * @param {string} delimiter</span>
+<span class="cm">     * @param {int} startPos - defaults to 0</span>
+<span class="cm">     * @param {boolean} includeDelimiter - defaults to false</span>
+<span class="cm">     * @param {boolean} requireLeadingSpace - defaults to true</span>
+<span class="cm">     * @return {array}</span>
+<span class="cm">     */</span>
+    <span class="nx">mashlib</span><span class="p">.</span><span class="nx">getChunksFromString</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">chatText</span><span class="p">,</span> <span class="nx">delimiter</span><span class="p">,</span> <span class="nx">startPos</span><span class="p">,</span> <span class="nx">includeDelimiter</span><span class="p">,</span> <span class="nx">requireLeadingSpace</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">startPos</span> <span class="o">===</span> <span class="s1">&#39;boolean&#39;</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">includeDelimiter</span> <span class="o">=</span> <span class="nx">startPos</span><span class="p">;</span>
+            <span class="nx">startPos</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-2">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-2">&#182;</a>               </div>               <p>Force chunks to be preceded by a space</p>             </td>             <td class="code">               <div class="highlight"><pre>        <span class="kd">var</span> <span class="nx">requireLeadingSpace</span> <span class="o">=</span> <span class="nx">requireLeadingSpace</span> <span class="o">||</span> <span class="kc">true</span><span class="p">;</span>
+        
+        <span class="kd">var</span> <span class="nx">chunkIndex</span> <span class="o">=</span> <span class="nx">chatText</span><span class="p">.</span><span class="nx">indexOf</span><span class="p">(</span><span class="nx">delimiter</span><span class="p">,</span> <span class="nx">startPos</span><span class="p">);</span>
+        <span class="kd">var</span> <span class="nx">chunks</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Array</span><span class="p">();</span>
+        <span class="k">if</span><span class="p">(</span><span class="k">typeof</span> <span class="nx">startPos</span> <span class="o">===</span> <span class="s1">&#39;undefined&#39;</span><span class="p">)</span>
+            <span class="nx">startPos</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="kd">var</span> <span class="nx">offSet</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+
+        <span class="k">if</span><span class="p">(</span><span class="nx">includeDelimiter</span><span class="p">)</span>
+            <span class="nx">offSet</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+        <span class="k">while</span><span class="p">(</span><span class="nx">startPos</span> <span class="o">&lt;=</span> <span class="nx">chatText</span><span class="p">.</span><span class="nx">length</span> <span class="o">&amp;&amp;</span> <span class="nx">chunkIndex</span> <span class="o">&gt;</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span></pre></div>             </td>           </tr>                               <tr id="section-3">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-3">&#182;</a>               </div>               <p>Grab the tag and push it on the array</p>             </td>             <td class="code">               <div class="highlight"><pre>            <span class="kd">var</span> <span class="nx">endPos</span> <span class="o">=</span> <span class="nx">chatText</span><span class="p">.</span><span class="nx">indexOf</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="nx">chunkIndex</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nx">endPos</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="nx">endPos</span> <span class="o">=</span> <span class="nx">chatText</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="c1">//handle sentence ending in a tag</span></pre></div>             </td>           </tr>                               <tr id="section-4">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-4">&#182;</a>               </div>               <p>Add the chunk if the delimiter:</p>
+
+<ul>
+<li>is not standalone:  'blah @ blah'</li>
+</ul>
+
+<p>AND:</p>
+
+<ul>
+<li>is the first thing in the chat</li>
+<li>if we don't care about leading spaces</li>
+<li>or if there is a leading space</li>
+</ul>             </td>             <td class="code">               <div class="highlight"><pre>            <span class="k">if</span><span class="p">((</span><span class="nx">chunkIndex</span><span class="o">+</span><span class="mi">1</span> <span class="o">&lt;</span> <span class="nx">endPos</span><span class="p">)</span> 
+                    <span class="o">&amp;&amp;</span> <span class="p">((</span><span class="nx">chunkIndex</span> <span class="o">===</span> <span class="mi">0</span><span class="p">)</span> 
+                        <span class="o">||</span> <span class="p">(</span><span class="o">!</span><span class="nx">requireLeadingSpace</span><span class="p">)</span> 
+                        <span class="o">||</span> <span class="p">(</span><span class="nx">chatText</span><span class="p">[</span><span class="nx">chunkIndex</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">===</span> <span class="s1">&#39; &#39;</span><span class="p">)))</span>
+                <span class="nx">chunks</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">chatText</span><span class="p">.</span><span class="nx">substring</span><span class="p">(</span><span class="nx">chunkIndex</span><span class="o">+</span><span class="nx">offSet</span><span class="p">,</span> <span class="nx">endPos</span><span class="p">).</span><span class="nx">toLowerCase</span><span class="p">());</span>
+            </pre></div>             </td>           </tr>                               <tr id="section-5">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-5">&#182;</a>               </div>               <p>Setup for the next one</p>             </td>             <td class="code">               <div class="highlight"><pre>            <span class="nx">startPos</span> <span class="o">=</span> <span class="nx">endPos</span> <span class="o">+</span><span class="mi">1</span><span class="p">;</span>
+            <span class="nx">chunkIndex</span> <span class="o">=</span> <span class="nx">chatText</span><span class="p">.</span><span class="nx">indexOf</span><span class="p">(</span><span class="nx">delimiter</span><span class="p">,</span> <span class="nx">startPos</span><span class="p">);</span>
+        <span class="p">}</span>
+        
+        <span class="k">if</span><span class="p">(</span><span class="nx">chunks</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Found chunks: &#39;</span> <span class="o">+</span> <span class="nx">chunks</span> <span class="o">+</span> <span class="s1">&#39; for delimiter: &#39;</span> <span class="o">+</span> <span class="nx">delimiter</span><span class="p">,</span> <span class="s1">&#39; starting at position &#39;</span> <span class="o">+</span> <span class="nx">startPos</span><span class="p">);</span>
+
+        <span class="k">return</span> <span class="nx">chunks</span><span class="p">;</span>
+    <span class="p">};</span>
+
+<span class="p">})()</span>
+
+</pre></div>             </td>           </tr>                </tbody>     </table>   </div> </body> </html> 

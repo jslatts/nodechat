@@ -1,42 +1,30 @@
-/*!
- * nodechat.js
- * Copyright(c) 2011 Justin Slattery <justin.slattery@fzysqr.com> 
- * MIT Licensed
- */
+// nodechat.js
+// Copyright(c) 2011 Justin Slattery <justin.slattery@fzysqr.com> 
+// MIT Licensed
 
-/*
- * Global settings
- */ 
+// Global settings
 var dev_port = 8000;
 var server_port = 80;
 var config_file = '/home/node/nodechat_config';
 
-/*
- * Include core dependencies.  
- */
+// Include core dependencies.  
 var _ = require('underscore')._
     , Backbone = require('backbone')
     , fs = require('fs')
     , http = require('http')
     , path = require('path');
 
-/*
- * Include and configure winston for logging.
- */
+// Include and configure winston for logging.
 var winston = require('winston');
 winston.add(winston.transports.File, { filename: 'nodechat.log' });
 
-/*
- * Include our own modules
- */
+// Include our own modules
 var models = require('./models/models')
     , auth = require('./lib/auth')
     , mashlib = require('./lib/mashlib')
     , ncutils = require('./lib/ncutils');
 
-/*
- * Require redis and setup the client 
- */
+// Require redis and setup the client 
 var redis = require('redis')
     , rc = redis.createClient();
 
@@ -46,9 +34,7 @@ rc.on('error', function (err) {
     winston.warn('Error ' + err);
 });
 
-/*
- * Setup connect, express, socket, and the connect-redis session store
- */
+// Setup connect, express, socket, and the connect-redis session store
 var express = require('express')
     , app = express.createServer()
     , connect = require('connect')
@@ -77,11 +63,9 @@ function compile(str, path, fn) {
 }
 
 
-/*
- *  Middleware that decides what a valid login looks like. In this case, just verify that we have a session object for the user.
- *
- *  This is an express [route middleware](http://expressjs.com/guide.html#route-middleware). Control is passed to the middleware function before the route function is called. We use restrictAccess() to verify that we have a valid user key in the session, implying that authentication has succeeded, before we send the client to the index.jade template. If we do not have a valid user in the session, then we redirect to the '/login' route. This effectively locks down our '/' route from unauthenticated access. You could add the restrictAccess() all to any route you want to protect.
- */
+//  Middleware that decides what a valid login looks like. In this case, just verify that we have a session object for the user.
+//
+//  This is an express [route middleware](http://expressjs.com/guide.html#route-middleware). Control is passed to the middleware function before the route function is called. We use restrictAccess() to verify that we have a valid user key in the session, implying that authentication has succeeded, before we send the client to the index.jade template. If we do not have a valid user in the session, then we redirect to the '/login' route. This effectively locks down our '/' route from unauthenticated access. You could add the restrictAccess() all to any route you want to protect.
 function restrict(req, res, next) {
     if (req.session.user) {
         next();
@@ -91,9 +75,7 @@ function restrict(req, res, next) {
     }
 }
 
-/*
- *  Tell connect to destory the session.
- */
+// Tell connect to destory the session.
 app.get('/logout', function (req, res) {
     // destroy the user's session to log them out
     // will be re-created next request
@@ -107,23 +89,19 @@ app.get('/disconnect', function (req, res) {
     res.render('disconnect');
 });
 
-/*
- * Route: GET /login
- *
- * Template: login.jade 
- */
+// Route: GET /login
+//
+// Template: login.jade 
 app.get('/login', function (req, res) {
     winston.info('GET /login');
     res.render('login');
 });
 
-/*
- * Route: POST /login
- *
- * Calls the authentication module to verify login details. Failures are redirected back to the login page.
- *
- * If the authentication module gives us a user object back, we ask connect to regenerate the session and send the client back to index. Note: we specify a _long_ cookie age so users won't have to log in frequently. We also set the httpOnly flag to false (I know, not so secure) to make the cookie available over [Flash Sockets](http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/net/Socket.html).
- */ 
+// Route: POST /login
+//
+// Calls the authentication module to verify login details. Failures are redirected back to the login page.
+//
+// If the authentication module gives us a user object back, we ask connect to regenerate the session and send the client back to index. Note: we specify a _long_ cookie age so users won't have to log in frequently. We also set the httpOnly flag to false (I know, not so secure) to make the cookie available over [Flash Sockets](http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/net/Socket.html).
 app.post('/login', function (req, res) {
     auth.authenticate(req.body.username, req.body.password, function (err, user) {
         if (user) {
@@ -149,10 +127,7 @@ app.post('/login', function (req, res) {
     });
 });
 
-/*
- * Serve up any static file requested by the client
- *
- */
+// Serve up any static file requested by the client
 app.get('/*.(js|css)', function (req, res) {
     res.sendfile('./' + req.url);
 });
@@ -208,12 +183,10 @@ rc.smembers('mashtags', function (err, data) {
     }
 });
 
-/*
- * When we have a client that shouldn't be connected, __kick 'em off!__' 
- * 
- * @param {object} client
- * @param {function} fn
- */
+// When we have a client that shouldn't be connected, __kick 'em off!__' 
+// 
+// - @param {object} client
+// - @param {function} fn
 function disconnectAndRedirectClient(client, fn) {
     winston.info('Disconnecting unauthenticated user');
     client.send({ event: 'disconnect' });
@@ -222,9 +195,7 @@ function disconnectAndRedirectClient(client, fn) {
     return;
 }
 
-/*
- * Helper function to send tags to a user
- */
+// Helper function to send tags to a user
 function sendMashTagsToUser(user, mashTag) {
     _.each(user.clientList, function (client) { 
         client.send({
@@ -234,11 +205,9 @@ function sendMashTagsToUser(user, mashTag) {
     });
 }
 
-/*
- * Event handler for client disconnects. Simply broadcasts the new active client count.
- * 
- * @param {object} client
- */
+// Event handler for client disconnects. Simply broadcasts the new active client count.
+// 
+// - @param {object} client
 function clientDisconnect(client, next) {
     winston.info('Client disconnecting: ' + client.sessionId);
 
@@ -427,6 +396,160 @@ function handleDirects(chat, originalUser) {
     }
 }
 
+//Add a new mashtag to redis
+function addMashTagToStore(mashTag) {
+    if (!mashTag) {
+        winston.warn('[addMashTagToStore] called without valid tag.');
+        return;
+    }
+
+    var rKey = 'mashtags';
+
+    rc.sadd(rKey, mashTag.xport({recurse: false}), function (err, data) {
+        if (err) {
+            winston.warn('[addMashTagToStore] SADD failed for key: ' + rKey + ' and value: ');
+        }
+        else {
+            winston.info('[addMashTagToStore] SADD succeeded for key: ' + rKey + ' and value: '); 
+        }
+    });
+}
+
+//Helper function to persist a tag subscription for a user
+function saveMashtagForUser(user, mashTag) {
+    if (!mashTag) {
+        winston.warn('[saveMashtagForUser] called without valid tag.');
+        return;
+    }
+
+    var rKey = 'user:' + user.get('name') + '.mashtags';
+
+    rc.sismember(rKey, mashTag.id, function (err, data) {
+        if (err) {
+            winston.warn('SISMEMBER failed for key: ' + rKey + ' and value: ' + mashTag.id);
+        }
+        else if (data === '0') {
+            rc.sadd(rKey, mashTag.id, function (err, data) {
+                if (err) {
+                    winston.warn('SADD failed for key: ' + rKey + ' and value: ' + mashTag.id);
+                }
+                else {
+                    winston.info('SADD succeeded for key: ' + rKey + ' and value: ' + mashTag.id);
+                }
+            });
+        }
+        else if (data === '1') {
+            winston.warn('Value: ' + mashTag.id + ' already exists for key: ' + rKey);
+        }
+    });
+}
+
+
+//Helper function to send tags to a user
+function broadcastGlobalMashTag(mashTag) {
+    socket.broadcast({
+        event: 'globalmashtag',
+        data: mashTag.xport({recurse: false})
+    });
+}
+
+//Send the chat to all currently subscribed users for a mashTag
+function notifySubscribedMashTagUsers(chat, mashTag, doNotNotifyList) {
+    mashTag.watchingUsers.forEach(function (user) {
+        if (doNotNotifyList[user.get('name')]) {
+            return;
+        }
+
+        winston.info('[notifySubscribedMashTagUsers] notifying user: ' + user.get('name') + ' for chat: ' + chat.xport());
+        _.each(user.clientList, function (client) { 
+            winston.info('[notifySubscribedMashTagUsers] client send for user: ' + user.get('name') + ' for client: ' + client.sessionId);
+            client.send({
+                event: 'mash',
+                data: chat.xport()
+            });
+        });
+
+        //Add the user to do not call list so they only get one copy
+        doNotNotifyList[user.get('name')] = 1;
+    });
+}
+
+//Generate a function to use for backbone tag searching.
+var makeTagFindHandler = function (tagName) {
+    return function (tag) {
+        return tag.get('name') === tagName;
+    };
+};
+
+//Generate a function to use for backbone user searching.
+var makeUserFindHandler = function (user) {
+    return function (u) {
+        return u === user;
+    };
+};
+
+
+var createTag = function (user, chat, alreadyNotifiedUsers) {
+    return function(tagName) {
+        rc.incr('next.mashtag.id', function (err, newMashId) {
+            var foundTag = new models.MashTagModel({'id': newMashId, 'name': tagName});
+
+            //Add the tag to the global list, the users list (since they submitted it), and the chat message. Then add subcribe the user
+            //to the mash tag.
+            nodeChatModel.globalMashTags.add(foundTag);
+            foundTag.watchingUsers.add(user);
+
+            addMashTagToStore(foundTag);
+            sendMashTagsToUser(user, foundTag);
+            broadcastGlobalMashTag(foundTag);
+            saveMashtagForUser(user, foundTag);
+
+            notifySubscribedMashTagUsers(chat, foundTag, alreadyNotifiedUsers);
+        });
+    };
+};
+
+//Handles MashTag creation and notification
+//TODO - refactor to use CPS
+function handleMashTags(chat, user) {
+    var mashTags, alreadyNotifiedUsers, foundTag, t;
+    if (!user) {
+        winston.warn('[handleMashTags] user is null');
+        return;
+    }
+
+    mashTags = mashlib.getChunksFromString(chat.get('text'), '#');
+    if (mashTags.length > 0) {
+        alreadyNotifiedUsers = []; //Make sure we only send a multi-tagged chat once
+
+        for (t = 0; t < mashTags.length; t++) {
+            foundTag = nodeChatModel.globalMashTags.find(makeTagFindHandler(mashTags[t]));
+
+            //Create a new mashTag if we need to
+            if (!foundTag) {
+                createTag(user, chat, alreadyNotifiedUsers)(mashTags[t]);
+            } 
+            else {
+                //In the case the tag exists, check to see if the submitting user is watching it
+                if (!foundTag.watchingUsers.some(makeUserFindHandler(user))) { 
+                    foundTag.watchingUsers.add(user);
+
+                    sendMashTagsToUser(user, foundTag);
+                    saveMashtagForUser(user, foundTag);
+                }
+
+                //Notify all the subscribed users
+                notifySubscribedMashTagUsers(chat, foundTag, alreadyNotifiedUsers);
+            }
+        }
+
+        return true;
+    }
+    else {
+        return true;
+    }
+}
+
 //Helper function to remove tag subscription for a user
 function deleteMashtagForUser(user, mashTag) {
     var rKey = 'user:' + user.get('name') + '.mashtags';
@@ -446,13 +569,8 @@ function deleteMashtagForUser(user, mashTag) {
 
 //Look for unsubscription notifications
 function checkForMashTagUnSub(chat, user) {
-    var mashTagsToRemove, foundTag, t, makeTagFindHandler, makeClientUnSubNotifyHandler;
+    var mashTagsToRemove, foundTag, t;
 
-    makeTagFindHandler = function (tagName) {
-        return function (tag) {
-            return tag.get('name') === tagName;
-        };
-    };
 
     makeClientUnSubNotifyHandler = function (tag) {
         return function (client) { 
@@ -466,8 +584,7 @@ function checkForMashTagUnSub(chat, user) {
 
     mashTagsToRemove = mashlib.getChunksFromString(chat.get('text'), '-');
     if (mashTagsToRemove.length > 0) {
-        //TODO remove for loop
-        for (t in mashTagsToRemove) {
+        for (t = 0; t < mashTagsToRemove.length; t++) {
             foundTag = nodeChatModel.globalMashTags.find(makeTagFindHandler(mashTagsToRemove[t]));
 
             //Try and remove it from redis whether we found it or not, in case of sync issues
@@ -486,18 +603,30 @@ function checkForMashTagUnSub(chat, user) {
     return true;
 }
 
+//Broadcast a chat to all connected clients
+var broadcastChat = function (chat, client) {
+    nodeChatModel.chats.add(chat);
+
+    winston.info('[' + client.sessionId + '] ' + chat.xport());
+
+    rc.rpush('chatentries', chat.xport({recurse: false}), redis.print);
+
+    socket.broadcast({
+        event: 'chat',
+        data: chat.xport()
+    }); 
+};
+
 var topPoster = {};
 topPoster.name = 'noone';
 topPoster.count = 0;
 topPoster.lettercount = 0;
 
-/*
- * Event handler for new chat messages. Stores the chat in redis and broadcasts it to all connected clients.
- * 
- * @param {object} client
- * @param {object} socket
- * @param {json string} msg
- */
+// Event handler for new chat messages. Stores the chat in redis and broadcasts it to all connected clients.
+// 
+// - @param {object} client
+// - @param {object} socket
+// - @param {json string} msg
 function message(client, socket, msg) {
     if (msg.rediskey) {
         winston.info('received from client: ' + msg.rediskey);
@@ -577,11 +706,13 @@ function message(client, socket, msg) {
                         var shouldBroadcast = handleDirects(chat, connectedUser); 
                         shouldBroadcast = shouldBroadcast && checkForMashTagUnSub(chat, connectedUser); 
 
-                        if (shouldBroadcast)
+                        if (shouldBroadcast) {
                             shouldBroadcast = shouldBroadcast && handleMashTags(chat, connectedUser); 
+                        }
 
-                        if (shouldBroadcast)
-                            broadcastChat(chat,client);
+                        if (shouldBroadcast) {
+                            broadcastChat(chat, client);
+                        }
                     }); 
                 }
             });
@@ -589,13 +720,46 @@ function message(client, socket, msg) {
     }
 }
 
-/*
- * Handle the new connection event for socket. 
- * 
- * connectSession() is a helper method that will verify a client's validity by checking for a cookie in the request header, then, if we find it,  _pulling their session out of redis_. 
- *
- * We then use the helper method in the 'connection' handler for our socket listener. Instead accepting any user connection, we are going to check that the client has a valid session (meaning they logged in). If they don't, give them the boot! If they do, then we store a copy of the session data (yay we have access!) in the client object and then setup the rest of the socket events. Finally, send them a welcome message just to prove that we remembered their profile. 
- */
+//Send the data in memory to the client
+function sendInitialDataToClient(client) {
+    var chatHistory;
+    if (nodeChatModel.chats.length > 100) {
+        chatHistory = nodeChatModel.chats.rest(nodeChatModel.chats.length - 100);
+    }
+    else  {
+        chatHistory = nodeChatModel.chats;
+    }
+
+    winston.info('sending ' + chatHistory.length);
+
+    nodeChatModel.users.forEach(function (user) {
+        var sUser = new models.User({name: user.get('name')});
+        client.send({
+            event: 'user:add',
+            data: sUser.xport()
+        });
+    });
+
+    chatHistory.forEach(function (chat) {
+        client.send({
+            event: 'chat',
+            data: chat.xport()
+        });
+    });
+
+    nodeChatModel.globalMashTags.forEach(function (mashTag) {
+        client.send({
+            event: 'globalmashtag',
+            data: mashTag.xport({recurse: false})
+        });
+    });
+}
+
+// Handle the new connection event for socket. 
+// 
+// connectSession() is a helper method that will verify a client's validity by checking for a cookie in the request header, then, if we find it,  _pulling their session out of redis_. 
+//
+// We then use the helper method in the 'connection' handler for our socket listener. Instead accepting any user connection, we are going to check that the client has a valid session (meaning they logged in). If they don't, give them the boot! If they do, then we store a copy of the session data (yay we have access!) in the client object and then setup the rest of the socket events. Finally, send them a welcome message just to prove that we remembered their profile. 
 socket.on('connection', function (client) {
     // helper function that goes inside your socket connection
     client.connectSession = function (fn) {
@@ -646,209 +810,45 @@ socket.on('connection', function (client) {
 });
 
 
-function sendInitialDataToClient(client) {
-    var chatHistory;
-    if (nodeChatModel.chats.length > 100) {
-        chatHistory = nodeChatModel.chats.rest(nodeChatModel.chats.length - 100);
-    }
-    else  {
-        chatHistory = nodeChatModel.chats;
-    }
-
-    winston.info('sending ' + chatHistory.length);
-
-    nodeChatModel.users.forEach(function (user) {
-        var sUser = new models.User({name: user.get('name')});
-        client.send({
-            event: 'user:add',
-            data: sUser.xport()
-        });
-    });
-
-    chatHistory.forEach(function (chat) {
-        client.send({
-            event: 'chat',
-            data: chat.xport()
-        });
-    });
-
-    nodeChatModel.globalMashTags.forEach(function (mashTag) {
-        client.send({
-            event: 'globalmashtag',
-            data: mashTag.xport({recurse: false})
-        });
-    });
-}
-
-
-var broadcastChat = function (chat, client) {
-    nodeChatModel.chats.add(chat);
-
-    winston.info('[' + client.sessionId + '] ' + chat.xport());
-
-    rc.rpush('chatentries', chat.xport({recurse: false}), redis.print);
-
-    socket.broadcast({
-        event: 'chat',
-        data:chat.xport()
-    }); 
-}
 
 
 
-//Handles MashTag creation and notification
-//TODO - refactor to use CPS
-function handleMashTags(chat, user) {
-    if (!user) {
-        winston.warn('[handleMashTags] user is null');
-        return;
-    }
-
-    var mashTags = mashlib.getChunksFromString(chat.get('text'), '#');
-    if (mashTags.length > 0) {
-        var alreadyNotifiedUsers = new Array(); //Make sure we only send a multi-tagged chat once
-
-        for (var t in mashTags) {
-            var foundTag = nodeChatModel.globalMashTags.find(function (tag) {return tag.get('name') === mashTags[t];});
-
-            //Create a new mashTag if we need to
-            if (!foundTag) {
-                var createTag = function (tagName) {
-                    rc.incr('next.mashtag.id', function (err, newMashId) {
-                        foundTag = new models.MashTagModel({'id': newMashId, 'name': tagName});
-
-                        //Add the tag to the global list, the users list (since they submitted it), and the chat message. Then add subcribe the user
-                        //to the mash tag.
-                        nodeChatModel.globalMashTags.add(foundTag);
-                        foundTag.watchingUsers.add(user);
-
-                        addMashTagToStore(foundTag);
-                        sendMashTagsToUser(user, foundTag);
-                        broadcastGlobalMashTag(foundTag);
-                        saveMashtagForUser(user, foundTag);
-
-                        notifySubscribedMashTagUsers(chat,foundTag, alreadyNotifiedUsers);
-                    });
-                };
-                createTag(mashTags[t]);
-            } 
-            else {
-                //In the case the tag exists, check to see if the submitting user is watching it
-                if (!foundTag.watchingUsers.some(function (u) { return u === user; })) { 
-                    foundTag.watchingUsers.add(user);
-
-                    sendMashTagsToUser(user, foundTag);
-                    saveMashtagForUser(user, foundTag);
-                }
-
-                //Notify all the subscribed users
-                notifySubscribedMashTagUsers(chat, foundTag, alreadyNotifiedUsers);
-            }
-        }
-
-        return true;
-    }
-    else {
-        return true;
-    }
-}
-
-function addMashTagToStore(mashTag) {
-    if (!mashTag) {
-        winston.warn('[addMashTagToStore] called without valid tag.');
-        return;
-    }
-
-    var rKey = 'mashtags';
-
-    rc.sadd(rKey, mashTag.xport({recurse: false}), function (err,data) {
-        if (err) winston.warn('[addMashTagToStore] SADD failed for key: ' + rKey + ' and value: ');
-        else winston.info('[addMashTagToStore] SADD succeeded for key: ' + rKey + ' and value: '); 
-    });
-}
-
-//Helper function to persist a tag subscription for a user
-function saveMashtagForUser(user, mashTag) {
-    if (!mashTag) {
-        winston.warn('[saveMashtagForUser] called without valid tag.');
-        return;
-    }
-
-    var rKey = 'user:' + user.get('name') + '.mashtags';
-
-    rc.sismember(rKey, mashTag.id, function (err, data) {
-        if (err) winston.warn('SISMEMBER failed for key: ' + rKey + ' and value: ' + mashTag.id);
-        else if (data === '0') {
-            rc.sadd(rKey, mashTag.id, function (err, data) {
-                if (err) winston.warn('SADD failed for key: ' + rKey + ' and value: ' + mashTag.id);
-                else winston.info('SADD succeeded for key: ' + rKey + ' and value: ' + mashTag.id);
-            });
-        }
-        else if (data === '1') {
-            winston.warn('Value: ' + mashTag.id + ' already exists for key: '+ rKey);
-        }
-    });
-}
 
 
-//Helper function to send tags to a user
-function broadcastGlobalMashTag(mashTag) {
-    socket.broadcast({
-        event: 'globalmashtag',
-        data: mashTag.xport({recurse: false})
-    });
-}
-
-
-
-//Send the chat to all currently subscribed users for a mashTag
-function notifySubscribedMashTagUsers(chat, mashTag, doNotNotifyList) {
-    mashTag.watchingUsers.forEach(function (user) {
-        if (doNotNotifyList[user.get('name')]) return;
-
-        winston.info('[notifySubscribedMashTagUsers] notifying user: ' + user.get('name') + ' for chat: ' + chat.xport());
-        _.each(user.clientList, function (client) { 
-            winston.info('[notifySubscribedMashTagUsers] client send for user: ' + user.get('name') + ' for client: ' + client.sessionId);
-            client.send({
-                event: 'mash',
-                data: chat.xport()
-            });
-        });
-
-        //Add the user to do not call list so they only get one copy
-        doNotNotifyList[user.get('name')] = 1;
-    });
-}
-
-
-/*
- * Open a config file (currently empty) to see if we are on a server
- */
+// Open a config file (currently empty) to see if we are on a server
 path.exists(config_file, function (exists) {
+    var port, options;
+
     winston.info('Attempting to use config at ' + config_file);
     if (!exists) {
         winston.info('no config found. starting in local dev mode');
         app.listen(dev_port);
-        var port = dev_port;
+        port = dev_port;
 
         //Hack, delete the old css. For some reason the middleware is not recompiling
         fs.unlink('./public/main.css', function (err) {
-            if (err) winston.warn('Unlink failed for ./public/main.css: ' + err);
-            else winston.info('Unlinked ./public/main.css');
+            if (err) {
+                winston.warn('Unlink failed for ./public/main.css: ' + err);
+            }
+            else {
+                winston.info('Unlinked ./public/main.css');
+            }
         });
 
-        var options = {
-          host: 'localhost',
-          port: port,
-          path: '/main.css'
-        }
+        options = {
+            host: 'localhost',
+            port: port,
+            path: '/main.css'
+        };
 
-        http.get(options, function (res) {winston.info('GET main.css complete')});
+        http.get(options, function (res) {
+            winston.info('GET main.css complete');
+        });
     }
     else {
         winston.info('config found. starting in server mode');
         app.listen(server_port);
-        var port = server_port;
+        port = server_port;
     }
 
     winston.info('listening on port ' + port);
