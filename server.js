@@ -89,8 +89,29 @@ app.get('/disconnect', function (req, res) {
     res.render('disconnect');
 });
 
-// Route: GET /login
+// Route: GET /signup
+// Template: signup.jade 
+app.get('/signup', function (req, res) {
+    winston.info('GET /signup');
+    res.render('signup');
+});
+
+// Route: POST /signup
 //
+// Calls createNewUserAccount() in the auth module, redirects to /login if a user object is returned. Redirects to /signup if not.
+app.post('/signup', function (req, res) {
+    auth.createNewUserAccount(req.body.username, req.body.password1, req.body.password2, req.body.email, function (err, user) {
+        if ((err) || (!user)) {
+            req.session.error = 'New user failed, please check your username and password.';
+            res.redirect('back');
+        }
+        else if (user) {
+            res.redirect('/login');
+        }
+    });
+});
+
+// Route: GET /login
 // Template: login.jade 
 app.get('/login', function (req, res) {
     winston.info('GET /login');
@@ -103,7 +124,7 @@ app.get('/login', function (req, res) {
 //
 // If the authentication module gives us a user object back, we ask connect to regenerate the session and send the client back to index. Note: we specify a _long_ cookie age so users won't have to log in frequently. We also set the httpOnly flag to false (I know, not so secure) to make the cookie available over [Flash Sockets](http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/net/Socket.html).
 app.post('/login', function (req, res) {
-    auth.authenticate(req.body.username, req.body.password, function (err, user) {
+    auth.authenticateUser(req.body.username, req.body.password, function (err, user) {
         if (user) {
             // Regenerate session when signing in
             // to prevent fixation 
@@ -286,7 +307,7 @@ function getConnectedUser(data, client) {
         client.on('disconnect', function () { 
             clientDisconnect(client, function () {
                 if (connectedUser.currentConnections > 1) {
-                    connectedUser.currentConnections--;
+                    connectedUser.currentConnections -= 1;
                 }
                 else {
                     winston.info('Removing user from active pool: ' + connectedUser.get('name'));
@@ -313,14 +334,14 @@ function getConnectedUser(data, client) {
         return c === client; 
     })) {
         winston.info('[getConnectedUser] existing user: ' + connectedUser.get('name') + ' on new client: ' + client.sessionId);
-        connectedUser.currentConnections++;
+        connectedUser.currentConnections += 1;
         connectedUser.clientList.push(client);
 
         //Set disconnect here so we can destroy the user model
         client.on('disconnect', function () { 
             clientDisconnect(client, function () {
                 if (connectedUser.currentConnections > 1) {
-                    connectedUser.currentConnections--;
+                    connectedUser.currentConnections -= 1;
                 }
                 else {
                     winston.info('Removing user from active pool: ' + connectedUser.get('name'));
@@ -490,7 +511,7 @@ var makeUserFindHandler = function (user) {
 
 
 var createTag = function (user, chat, alreadyNotifiedUsers) {
-    return function(tagName) {
+    return function (tagName) {
         rc.incr('next.mashtag.id', function (err, newMashId) {
             var foundTag = new models.MashTagModel({'id': newMashId, 'name': tagName});
 
@@ -522,7 +543,7 @@ function handleMashTags(chat, user) {
     if (mashTags.length > 0) {
         alreadyNotifiedUsers = []; //Make sure we only send a multi-tagged chat once
 
-        for (t = 0; t < mashTags.length; t++) {
+        for (t = 0; t < mashTags.length; t += 1) {
             foundTag = nodeChatModel.globalMashTags.find(makeTagFindHandler(mashTags[t]));
 
             //Create a new mashTag if we need to
@@ -584,7 +605,7 @@ function checkForMashTagUnSub(chat, user) {
 
     mashTagsToRemove = mashlib.getChunksFromString(chat.get('text'), '-');
     if (mashTagsToRemove.length > 0) {
-        for (t = 0; t < mashTagsToRemove.length; t++) {
+        for (t = 0; t < mashTagsToRemove.length; t += 1) {
             foundTag = nodeChatModel.globalMashTags.find(makeTagFindHandler(mashTagsToRemove[t]));
 
             //Try and remove it from redis whether we found it or not, in case of sync issues
@@ -684,7 +705,7 @@ function message(client, socket, msg) {
                                 topPoster.count = 0;
                             }, 5000);
 
-                            topPoster.count++;
+                            topPoster.count += 1;
                             topPoster.lettercount += cleanChat.length;
                         }
                     }

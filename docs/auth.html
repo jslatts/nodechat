@@ -1,38 +1,27 @@
-<!DOCTYPE html>  <html> <head>   <title>auth.js</title>   <meta http-equiv="content-type" content="text/html; charset=UTF-8">   <link rel="stylesheet" media="all" href="docco.css" /> </head> <body>   <div id="container">     <div id="background"></div>            <div id="jump_to">         Jump To &hellip;         <div id="jump_wrapper">           <div id="jump_page">                                           <a class="source" href="controllers.html">                 controllers.js               </a>                                           <a class="source" href="auth.html">                 auth.js               </a>                                           <a class="source" href="backbone.html">                 backbone.js               </a>                                           <a class="source" href="io.html">                 io.js               </a>                                           <a class="source" href="jquery-1.5.1.html">                 jquery-1.5.1.js               </a>                                           <a class="source" href="mashlib.html">                 mashlib.js               </a>                                           <a class="source" href="ncutils.html">                 ncutils.js               </a>                                           <a class="source" href="socket.io.html">                 socket.io.js               </a>                                           <a class="source" href="socket.html">                 socket.js               </a>                                           <a class="source" href="transport.html">                 transport.js               </a>                                           <a class="source" href="underscore.html">                 underscore.js               </a>                                           <a class="source" href="util.html">                 util.js               </a>                                           <a class="source" href="models.html">                 models.js               </a>                                           <a class="source" href="views.html">                 views.js               </a>                        </div>         </div>       </div>          <table cellpadding="0" cellspacing="0">       <thead>         <tr>           <th class="docs">             <h1>               auth.js             </h1>           </th>           <th class="code">           </th>         </tr>       </thead>       <tbody>                               <tr id="section-1">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-1">&#182;</a>               </div>                            </td>             <td class="code">               <div class="highlight"><pre><span class="cm">/*!</span>
-<span class="cm"> * auth.js </span>
-<span class="cm"> * Handles new user accounts and authentication</span>
-<span class="cm"> *</span>
-<span class="cm"> * Copyright(c) 2011 Justin Slattery &lt;justin.slattery@fzysqr.com&gt; </span>
-<span class="cm"> * MIT Licensed</span>
-<span class="cm"> */</span>
+<!DOCTYPE html>  <html> <head>   <title>auth.js</title>   <meta http-equiv="content-type" content="text/html; charset=UTF-8">   <link rel="stylesheet" media="all" href="docco.css" /> </head> <body>   <div id="container">     <div id="background"></div>          <table cellpadding="0" cellspacing="0">       <thead>         <tr>           <th class="docs">             <h1>               auth.js             </h1>           </th>           <th class="code">           </th>         </tr>       </thead>       <tbody>                               <tr id="section-1">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-1">&#182;</a>               </div>               <p>auth.js 
+Handles new user accounts and authentication</p>
 
+<p>Copyright(c) 2011 Justin Slattery <a href="&#109;a&#x69;&#108;t&#111;:&#106;&#117;&#x73;&#116;&#105;&#110;&#46;&#x73;&#108;&#x61;&#x74;&#x74;&#101;&#114;&#x79;&#64;&#x66;&#122;&#x79;&#115;&#113;&#x72;&#x2E;&#99;o&#109;">&#106;&#117;&#x73;&#116;&#105;&#110;&#46;&#x73;&#108;&#x61;&#x74;&#x74;&#101;&#114;&#x79;&#64;&#x66;&#122;&#x79;&#115;&#113;&#x72;&#x2E;&#99;o&#109;</a> 
+MIT Licensed</p>             </td>             <td class="code">               <div class="highlight"><pre></pre></div>             </td>           </tr>                               <tr id="section-2">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-2">&#182;</a>               </div>               <p>This will be a <a href="http://www.commonjs.org/">CommonJS module</a> so we need to start off with some setup. </p>
 
-<span class="cm">/*</span>
-<span class="cm"> * This will be a [CommonJS module](http://www.commonjs.org/) so we need to start off with some setup. </span>
-<span class="cm"> *</span>
-<span class="cm"> * Here we are checking to see if this code is included as a module. If it is, we go ahead and include our dependencies (in this case, our models lib, redis, and hash + friends). If we are not a module, we may as well explode because the rest of the code won&#39;t run without redis and hash.</span>
-<span class="cm"> */</span>
-<span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+<p>Here we are checking to see if this code is included as a module. If it is, we go ahead and include our dependencies (in this case, our models lib, redis, and hash + friends). If we are not a module, we may as well explode because the rest of the code won't run without redis and hash.</p>             </td>             <td class="code">               <div class="highlight"><pre><span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
     <span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">exports</span> <span class="o">!==</span> <span class="s1">&#39;undefined&#39;</span><span class="p">)</span> <span class="p">{</span>
         <span class="nx">redis</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;redis&#39;</span><span class="p">);</span>
         <span class="nx">rc</span> <span class="o">=</span> <span class="nx">redis</span><span class="p">.</span><span class="nx">createClient</span><span class="p">();</span>
-        <span class="nx">models</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;../models/models&#39;</span><span class="p">);</span></pre></div>             </td>           </tr>                               <tr id="section-2">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-2">&#182;</a>               </div>               <p>joose is required to support the hash lib we are using</p>             </td>             <td class="code">               <div class="highlight"><pre>        <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;joose&#39;</span><span class="p">);</span>
+        <span class="nx">models</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;../models/models&#39;</span><span class="p">);</span></pre></div>             </td>           </tr>                               <tr id="section-3">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-3">&#182;</a>               </div>               <p>joose is required to support the hash lib we are using</p>             </td>             <td class="code">               <div class="highlight"><pre>        <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;joose&#39;</span><span class="p">);</span>
         <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;joosex-namespace-depended&#39;</span><span class="p">);</span>
         <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;hash&#39;</span><span class="p">);</span>
     <span class="p">}</span> 
     <span class="k">else</span> <span class="p">{</span>
         <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="s1">&#39;auth.js must be loaded as a module.&#39;</span><span class="p">);</span>
-    <span class="p">}</span>
+    <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-4">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-4">&#182;</a>               </div>               <p>Checks to see if the user exists in redis. If it does, it calls verifyUserAccount(). Otherwise callback with an error.</p>
 
-    <span class="cm">/**</span>
-<span class="cm">     * Checks to see if the user exists in redis. If it does, it calls verifyUserAccount(). Otherwise callback with an error.</span>
-<span class="cm">     *</span>
-<span class="cm">     * @param: {string} name</span>
-<span class="cm">     * @param: {string} pass</span>
-<span class="cm">     * @param: {function} fn</span>
-<span class="cm">     * @api: public</span>
-<span class="cm">     */</span>
-    <span class="nx">exports</span><span class="p">.</span><span class="nx">authenticateUser</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">name</span><span class="p">,</span> <span class="nx">pass</span><span class="p">,</span> <span class="nx">fn</span><span class="p">)</span> <span class="p">{</span>
+<ul>
+<li>@param: {string} name</li>
+<li>@param: {string} pass</li>
+<li>@param: {function} fn</li>
+<li>@api: public</li>
+</ul>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="nx">exports</span><span class="p">.</span><span class="nx">authenticateUser</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">name</span><span class="p">,</span> <span class="nx">pass</span><span class="p">,</span> <span class="nx">fn</span><span class="p">)</span> <span class="p">{</span>
         <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;[authenticate] Starting auth for &#39;</span> <span class="o">+</span> <span class="nx">name</span> <span class="o">+</span> <span class="s1">&#39; with password &#39;</span> <span class="o">+</span> <span class="nx">pass</span><span class="p">);</span>
         
         <span class="kd">var</span> <span class="nx">rKey</span> <span class="o">=</span> <span class="s1">&#39;user:&#39;</span> <span class="o">+</span> <span class="nx">name</span><span class="p">;</span>
@@ -47,23 +36,18 @@
                 <span class="nx">verifyUserAccount</span><span class="p">(</span><span class="nx">data</span><span class="p">,</span> <span class="nx">pass</span><span class="p">,</span> <span class="nx">fn</span><span class="p">)</span>
             <span class="p">}</span>
         <span class="p">});</span>
-    <span class="p">};</span>
+    <span class="p">};</span></pre></div>             </td>           </tr>                               <tr id="section-5">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-5">&#182;</a>               </div>               <p>Steps through the process of retreiving the salt, calculating the hash of the passed in password, then comparing it to the stored hash in redis.</p>
 
-    <span class="cm">/**</span>
-<span class="cm">     * Steps through the process of retreiving the salt, calculating the hash of the passed in password, then comparing it to the stored hash in redis.</span>
-<span class="cm">     *</span>
-<span class="cm">     * If successful, create a new user model and pass it to the callback.</span>
-<span class="cm">     *</span>
-<span class="cm">     * Otherwise, any failure along the way means we callback with an error.</span>
-<span class="cm">     * </span>
-<span class="cm">     * Assumes the passed in user exists in redis. </span>
-<span class="cm">     *</span>
-<span class="cm">     * @param: {string} foundUserName</span>
-<span class="cm">     * @param: {string} pass</span>
-<span class="cm">     * @param: {function} fn</span>
-<span class="cm">     * @api: private</span>
-<span class="cm">     */</span>
-    <span class="kd">var</span> <span class="nx">verifyUserAccount</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">foundUserName</span><span class="p">,</span> <span class="nx">pass</span><span class="p">,</span> <span class="nx">fn</span><span class="p">)</span> <span class="p">{</span>
+<p>If successful, create a new user model and pass it to the callback. Otherwise, any failure along the way means we callback with an error.</p>
+
+<p>Assumes the passed in user exists in redis. </p>
+
+<ul>
+<li>@param: {string} foundUserName</li>
+<li>@param: {string} pass</li>
+<li>@param: {function} fn</li>
+<li>@api: private</li>
+</ul>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="kd">var</span> <span class="nx">verifyUserAccount</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">foundUserName</span><span class="p">,</span> <span class="nx">pass</span><span class="p">,</span> <span class="nx">fn</span><span class="p">)</span> <span class="p">{</span>
         <span class="kd">var</span> <span class="nx">rKey</span> <span class="o">=</span> <span class="s1">&#39;user:&#39;</span> <span class="o">+</span> <span class="nx">foundUserName</span><span class="p">;</span>
 
         <span class="nx">rc</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="nx">rKey</span> <span class="o">+</span> <span class="s1">&#39;.salt&#39;</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">data</span><span class="p">){</span>
@@ -96,25 +80,21 @@
                 <span class="k">return</span> <span class="nx">fn</span><span class="p">(</span><span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="s1">&#39;[verifyUserAccount] salt not found&#39;</span><span class="p">));</span>
             <span class="p">}</span>
         <span class="p">});</span>
-    <span class="p">}</span>
+    <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-6">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-6">&#182;</a>               </div>               <p>Verifies that the two passwords match, then use the current timestamp to salt a hash of the password. Store it all in a user model which we will save as a poor man's profile if everything succeeds.</p>
 
-    <span class="cm">/**</span>
-<span class="cm">     * Verifies that the two passwords match, then use the current timestamp to salt a hash of the password. Store it all in a user model which we will save as a poor man&#39;s profile if everything succeeds.</span>
-<span class="cm">     *</span>
-<span class="cm">     * Any failure along the way means we callback with an error.</span>
-<span class="cm">     * </span>
-<span class="cm">     * @param: {string} name</span>
-<span class="cm">     * @param: {string} pass1</span>
-<span class="cm">     * @param: {string} pass2</span>
-<span class="cm">     * @param: {string} email</span>
-<span class="cm">     * @param: {string} ponies</span>
-<span class="cm">     * @param: {function} fn</span>
-<span class="cm">     * @api: public</span>
-<span class="cm">     */</span>
-    <span class="nx">exports</span><span class="p">.</span><span class="nx">createNewUserAccount</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">name</span><span class="p">,</span> <span class="nx">pass1</span><span class="p">,</span> <span class="nx">pass2</span><span class="p">,</span> <span class="nx">email</span><span class="p">,</span> <span class="nx">ponies</span><span class="p">,</span> <span class="nx">fn</span><span class="p">)</span> <span class="p">{</span>
+<p>Any failure along the way means we callback with an error.</p>
+
+<ul>
+<li>@param: {string} name</li>
+<li>@param: {string} pass1</li>
+<li>@param: {string} pass2</li>
+<li>@param: {string} email</li>
+<li>@param: {function} fn</li>
+<li>@api: public</li>
+</ul>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="nx">exports</span><span class="p">.</span><span class="nx">createNewUserAccount</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">name</span><span class="p">,</span> <span class="nx">pass1</span><span class="p">,</span> <span class="nx">pass2</span><span class="p">,</span> <span class="nx">email</span><span class="p">,</span> <span class="nx">fn</span><span class="p">)</span> <span class="p">{</span>
         <span class="k">if</span> <span class="p">(</span><span class="nx">pass1</span> <span class="o">!==</span> <span class="nx">pass2</span><span class="p">)</span> <span class="k">return</span> <span class="nx">fn</span><span class="p">(</span><span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="s1">&#39;[createNewUserAccount] Passwords do not match&#39;</span><span class="p">));</span>
 
-        <span class="kd">var</span> <span class="nx">newUser</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">models</span><span class="p">.</span><span class="nx">User</span><span class="p">({</span><span class="nx">name</span><span class="o">:</span> <span class="nx">name</span><span class="p">,</span> <span class="nx">email</span><span class="o">:</span> <span class="nx">email</span><span class="p">,</span> <span class="nx">ponies</span><span class="o">:</span> <span class="nx">ponies</span><span class="p">});</span>
+        <span class="kd">var</span> <span class="nx">newUser</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">models</span><span class="p">.</span><span class="nx">User</span><span class="p">({</span><span class="nx">name</span><span class="o">:</span> <span class="nx">name</span><span class="p">,</span> <span class="nx">email</span><span class="o">:</span> <span class="nx">email</span> <span class="p">});</span>
 
         <span class="kd">var</span> <span class="nx">rKey</span> <span class="o">=</span> <span class="s1">&#39;user:&#39;</span> <span class="o">+</span> <span class="nx">name</span><span class="p">;</span>
 
