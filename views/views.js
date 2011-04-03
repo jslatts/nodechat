@@ -98,79 +98,144 @@ var UserView = Backbone.View.extend({
     }
 });
 
-var NodeChatView = Backbone.View.extend({
-    newMessages: 0
-    , newDirectMessages: 0
-
+var TopicView = Backbone.View.extend({
+    className: 'topic'
     , initialize: function (options) {
-        _.bindAll(this, 'addUser', 'removeUser', 'addChat', 'addDirect', 'addMash', 'triggerAutoComplete', 'sendMessages', 'changeDisplayMode');
+        _.bindAll(this, 'render', 'remove', 'addChat', 'removeChat', 'renderAllChats', 'hide');
         this.model.chats.bind('add', this.addChat);
         this.model.chats.bind('remove', this.removeChat);
-        this.model.mashTags.bind('add', this.addMashTag);
-        this.model.mashTags.bind('remove', this.removeMashTag);
-        this.model.globalMashTags.bind('add', this.addGlobalMashTag);
-        this.model.globalMashTags.bind('remove', this.removeGlobalMashTag);
-        this.model.mashes.bind('add', this.addMash);
-        this.model.mashes.bind('remove', this.removeMash);
-        this.model.directs.bind('add', this.addDirect);
-        this.model.directs.bind('remove', this.removeDirect);
+        this.bind('topic:renderAllChats', this.render);
+        this.bind('topic:hide', this.render);
+        this.model.view = this;
+
+        this.newMessages = 0;
+        this.visible = options.visible; //By default, don't render a topic
+    }
+
+    , render: function () {
+        log('[render] vis ' + this.visible);
+        $(this.el).html(this.model.get('name'));
+
+        if (this.visible) {
+            log('showing');
+            $(this.el).addClass('selected_topic');
+        }
+        else {
+            log('hiding');
+            $(this.el).removeClass('selected_topic');
+        }
+
+        return this;
+    }
+
+    , remove: function () {
+        $(this.el).remove();
+    }
+
+    //Adds a new chat view to the topic. 
+    //If topic.visible is not set to true, only trim the collection and flag the newMessage event
+    , addChat: function (chat) {
+        log('[addChat] vis' + this.visible);
+        if (this.visible) {
+            var view = new ChatView({model: chat});
+            $('#chat_list').append(view.render().el);
+            $('#chat_list')[0].scrollTop = $('#chat_list')[0].scrollHeight;
+        }
+        
+        //remove old ones if we are getting too long
+        if (this.model.chats.length > 1000)
+            this.model.chats.remove(this.model.chats.first());
+
+        //Keep track of whether we have a new message and emit an event if we do
+        this.newMessages += 1;
+        if(this.newMessages > 0) {
+            this.trigger('topic:message');
+        }
+    }
+
+    , removeChat: function (chat) { 
+        chat.view.remove(); 
+    }
+
+    , hide: function() {
+        this.visible = false;
+        $('#chat_list').html('');
+        this.trigger('topic:hide');
+    }
+
+    , renderAllChats: function () {
+        var that;
+
+        this.visible = true;
+        log('[renderAllChats] vis' + this.visible);
+
+        that = this;
+        this.model.chats.each(function (chat) {
+            that.addChat(chat)
+        });
+        this.trigger('topic:renderAllChats');
+    }
+});
+
+var NodeChatView = Backbone.View.extend({
+    initialize: function (options) {
+        var main, that, currentDisplayTopic, chunkSize;
+
+        _.bindAll(this, 'addUser', 'removeUser', 'addTopic', 'removeTopic', 'triggerAutoComplete', 'suggestAutoComplete', 'sendMessages', 'changeDisplayMode');
+        this.model.topics.bind('add', this.addTopic);
+        this.model.topics.bind('remove', this.removeTopic);
         this.model.users.bind('add', this.addUser);
         this.model.users.bind('remove', this.removeUser);
         this.socket = options.socket;
         this.userName = options.userName;
-        this.chunkSizes = new Array();
-        this.changeDisplayMode('main', '#main');
+        this.chunkSize = 0;
+
+        //Always start with 'main' by default so we have something to display
+        main = new models.TopicModel({name: 'main'});
+        this.model.topics.add(main);
+        this.changeDisplayMode(main);
+
         that = this;
-        $('#message_box').focusin(function () { that.clearAlerts(0); }); //Clear the alerts when the box gets focus
+        $('#message_box').focusin(function () { 
+            that.clearAlerts(0); 
+        }); //Clear the alerts when the box gets focus
     }
 
     , events: {
         'submit #message_form' : 'sendMessage'
         , 'keydown #message_form' : 'triggerAutoComplete'
+        , 'keyup #message_form' : 'suggestAutoComplete'
     }
-    , changeDisplayMode: function (mode, boxTitle) {
-        //If already in progress, try again in a second
-        if( $('#direct_box, #mashtag_box, #chat_box').is(":animated") ) {
-            setTimeout(changeDisplayMode(mode, boxTitle), 100);
+    , changeDisplayMode: function (topic) {
+        if (this.currentDisplayTopic === topic && topic.view.visible) {
             return;
         }
 
-        boxTitle = boxTitle || 'undefined';
-        if(boxTitle !== '@' + this.userName)
-            $('#box_title').text(boxTitle);
-
-        if (mode === this.currentDisplayMode) return;
-
-
-        switch(mode) {
-            case 'main':
-                $('#direct_box').fadeOut(100, function () {
-                    $('#mashtag_box').fadeOut(100, function () {
-                        $('#chat_box').fadeIn(100);
-                        $('#chat_list')[0].scrollTop = $('#chat_list')[0].scrollHeight;
-                        this.currentDisplayMode = 'main';
-                    });
-                });
-                break;
-            case 'mash':
-                $('#chat_box').fadeOut(100, function () {
-                    $('#direct_box').fadeOut(100, function () {
-                        $('#mashtag_box').fadeIn(100);
-                        $('#mashtag_list')[0].scrollTop = $('#mashtag_list')[0].scrollHeight;
-                        this.currentDisplayMode = 'mash';
-                    });
-                });
-                break;
-            case 'direct':
-                $('#chat_box').fadeOut(100, function () {
-                    $('#mashtag_box').fadeOut(100, function () {
-                        $('#direct_box').fadeIn(100);
-                        $('#direct_chat_list')[0].scrollTop = $('#direct_chat_list')[0].scrollHeight;
-                        this.currentDisplayMode = 'direct';
-                    });
-                });
-                break;
+        //If already in progress, try again in a second
+        if( $('#chat_box').is(":animated") ) {
+            setTimeout(this.changeDisplayMode(topic), 100);
+            return;
         }
+
+        if (topic) {
+            boxTitle = topic.get('name') || 'undefined';
+        }
+
+        var that = this;
+        //Fade out, load the chats, then fade in
+        $('#chat_box').fadeOut(100, function () {
+
+            if (this.currentDisplayTopic) {
+                this.currentDisplayTopic.view.hide();
+            }
+
+            this.currentDisplayTopic = topic ;
+
+            topic.view.renderAllChats(); //then render the new one. This will automatically set visible = true
+
+            $('#chat_box').fadeIn(100);
+            $('#chat_list')[0].scrollTop = $('#chat_list')[0].scrollHeight;
+        });
     }
     , clearAlerts: function (count) {
         document.title = 'nodechat';
@@ -211,43 +276,26 @@ var NodeChatView = Backbone.View.extend({
             }, 2000);
         }
     }
-    , addChat: function (chat) {
-        var view = new ChatView({model: chat});
-        $('#chat_list').append(view.render().el);
-        $('#chat_list')[0].scrollTop = $('#chat_list')[0].scrollHeight;
-        
-        //remove old ones if we are getting too long
-        if (this.model.chats.length > 1000)
-            this.model.chats.remove(this.model.chats.first());
 
+    , addTopic: function (topic) {
+        var view, that;
 
-        ++this.newMessages;
-        if(this.newMessages > 0) 
-            this.setMsgAlert();
+        var view = new TopicView({model: topic, visible: false});
+        $('#topic_list').append(view.render().el);
+
+        that = this;
+        view.bind('topic:message', function(event) {
+            that.setMsgAlert();
+        });
+
+        if (this.currentDisplayTopic === topic) {
+            this.changeDisplayMode(topic);
+        }
     }
-    , removeChat: function (chat) { chat.view.remove(); }
 
-    , addDirect: function (direct) {
-        var view = new ChatView({model: direct});
-        $('#direct_chat_list').append(view.render().el);
-        $('#direct_chat_list')[0].scrollTop = $('#direct_chat_list')[0].scrollHeight;
-
-        ++this.newDirectMessages;
-        log('have directs' + this.newDirectMessages);
-        if(this.newDirectMessages > 0) 
-            this.setDirectAlert();
-
-        //remove old ones if we are getting too long
-        if (this.model.directs.length > 500)
-            this.model.directs.remove(this.model.directs.first());
-
-        this.changeDisplayMode('direct', '@' + direct.get('name'));
-
-        var inputField = $('#message_field');
-        if(inputField.val().length === 0)
-            inputField.val('@' + direct.get('name') + ' '); 
+    , removeTopic: function (topic) {
+        topic.view.remove();
     }
-    , removeDirect: function (direct) { direct.view.remove(); }
 
     , addUser: function (user) {
         var view = new UserView({model: user});
@@ -268,55 +316,95 @@ var NodeChatView = Backbone.View.extend({
     }
 
     , sendMessage: function () {
-        var inputField = $('input[name=message]');
+        var inputField, match, delimiter, newTopic;
+
+        inputField = $('input[name=message]');
 
         if (inputField.val().length > 400)
             return;
 
         this.socket.send({
             event: 'chat'
-            , topic: 'main'
             , data: inputField.val() 
         });
 
-        var directs = mashlib.getChunksFromString(inputField.val(), '@', true);
+
+        //Check to see if we have a direct or a topic chat and retain the prefix
+        delimiter = '@';
+        match = mashlib.getChunksAtStartOfString(inputField.val(), delimiter, false);
+
+        if (!match) {
+            delimiter = '#';
+            match = mashlib.getChunksAtStartOfString(inputField.val(), delimiter, false); 
+            if (match) log('match found');
+        }
 
         inputField.val('');
-        this.chunkSizes = new Array();
+        this.chunkSize = 0;
 
-        if (directs.length > 0)
+        if (match)
         {
-            inputField.val(directs.join(' ') + ' ');
+            inputField.val(delimiter + match + ' ');
+            this.chunkSize = match.length + 1;
 
-            this.chunkSizes = _.map(directs, function (d) {
-                return d.length;
+            var topic = this.model.topics.find(function(t) {
+                return t.get('name') === match;
             });
-        
-        }
-        this.clearAlerts(-1);
-    }
 
-    , triggerAutoComplete: function (key) {
-        //If backspace has been pressed, and we have some chunks, look into autodelete 
-        if(key.keyCode == 8 && this.chunkSizes.length > 0) {
-            var inputField = $('input[name=message]');
-            log(_.reduce(this.chunkSizes, function (memo, num) { return memo + num; }, 0));
-            //Only autodelete if we are right after the chunks
-            if (inputField.val().length == _.reduce(this.chunkSizes, function (memo, num) { return memo + num + 1; }, 0))
-            {
-                var chunk = this.chunkSizes.pop();
-                var current = inputField.val();
-                current = current.substring(0, current.length - chunk);
-                inputField.val(current);
-
-                log('delete length is ' + current.length);
-                //If we are at zero when this is done, switch to main window
-                if(current.length <= 1)  {
-                    log('made it in');
-                    this.changeDisplayMode('main', '#main');
-                }
+            if (!topic) {
+                topic = new models.TopicModel({name: match});
+                this.currentDisplayTopic = topic;
+                this.model.topics.add(topic);
+                log('[sendMessage] set currentDisplayTopic ' + topic.get('name'));
+            }
+            else {
+                log('[sendMessage] change display to ' + topic.get('name'));
+                this.changeDisplayMode(topic);
             }
 
+        }
+
+        this.clearAlerts(-1);
+    }
+    , suggestAutoComplete: function(key) {
+        var inputField = $('input[name=message]');
+
+        if(inputField.val().length >= 1 && inputField.val()[0] == '#' ) {
+            var chunk = mashlib.getChunksFromString(inputField.val(), '#', 0, true)[0];
+
+            var topic = this.model.topics.find(function(t) {
+                return t.get('name') === chunk;
+            });
+
+            if (topic) {
+                this.changeDisplayMode(chunk);
+            }
+        }
+        if(inputField.val().length >= 1 && inputField.val()[0] == '@' ) {
+            var chunk = mashlib.getChunksFromString(inputField.val(), '@', 0, true)[0];
+            this.changeDisplayMode(chunk);
+        } 
+    }
+    , triggerAutoComplete: function (key) {
+        //If backspace has been pressed, and we have some chunks, look into autodelete 
+        if(key.keyCode == 8 && this.chunkSize > 0) {
+            var inputField = $('input[name=message]');
+
+            //Only autodelete if we are right after the chunks
+            if (inputField.val().length == this.chunkSize + 1); 
+            {
+                inputField.val('');
+                this.chunkSize = 0;
+
+                //If we are at zero when this is done, switch to main window
+                var topic = this.model.topics.find(function(t) {
+                    return t.get('name') === 'main';
+                });
+
+                if (topic) {
+                    this.changeDisplayMode(topic);
+                }
+            }
         } 
         else if(key.keyCode == 9) {
             key.preventDefault();
@@ -325,20 +413,30 @@ var NodeChatView = Backbone.View.extend({
             if(inputField.length > 0) {
                 var currentText = inputField.val();
 
-                var lastAT = currentText.lastIndexOf('@');
-                var lastSpace = currentText.lastIndexOf(' ');
-
                 //If we have a @ to handle
-                if (lastAT > -1 && lastAT > lastMT && lastAT > lastSpace) {
-                    var chunk = mashlib.getChunksFromString(currentText, '@', lastAT);
-
+                var chunk = mashlib.getChunksAtStartOfString(currentText, '@', false);
+                if (chunk) {
                     var match = this.model.users.find(function (u) {
                         return (u.get('name').toLowerCase().indexOf(chunk) != -1);
                     });
 
                     if(match) {
-                        inputField.val(currentText.substring(0, lastAT+1) + match.get('name').toLowerCase() + ' ');
-                        this.changeDisplayMode('direct', '@' + match.get('name'));
+                        inputField.val('@' + match.get('name').toLowerCase() + ' ');
+                        this.changeDisplayMode(match);
+                    }
+                }
+                else
+                {
+                    var chunk = mashlib.getChunksFromString(currentText, '#', false);
+                    if (chunk) {
+                        var match = this.model.topics.find(function(t) {
+                            return (t.get('name').toLowerCase().indexOf(chunk) != -1);
+                        });
+
+                        if(match) {
+                            inputField.val('#' + match.get('name') + ' ');
+                            this.changeDisplayMode(match);
+                        }
                     }
                 }
             }

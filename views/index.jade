@@ -31,9 +31,9 @@ html(lang='en')
       #help
         p @user to send direct messages
           br
-          | #mashtag to start a new a topic
+          | #topic to start a new a topic
           br
-          | -mashtag to unsubscribe from a topic
+          | -topic to unsubscribe from a topic
           br
           a(href='/logout') logout
       h1 nodechat 
@@ -51,29 +51,21 @@ html(lang='en')
         label You are connected as: 
           = locals.name
 
-      label#box_title Initial
+      #topic_list 
 
       #chat_box
         #chat_list
 
-      #direct_box
-        #direct_chat_list
-
-      #mashtag_box
-        #mashtag_chat_list
-         
       #message_box
         form(method='post', action='#', onsubmit='return false')#message_form
           p
             input(type='text', name='message', size='240')#message_field
             input(type='submit', value='send')#message_send_button
 
-      #global_mashtag_box
+      #global_topic_box
         p(style='margin-top:0px')
           | Topics 
-        #global_mashtag_list
+        #global_topic_list
         br
-        p Followed Topics
-        #mashtag_list
 
 

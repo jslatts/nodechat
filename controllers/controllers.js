@@ -17,7 +17,7 @@ NodeChatController = {
         var mySocket, hash, user, view, trying, connected;
 
         this.socket = new io.Socket(null, {port: options.port
-            , transports: ['websocket', 'flashsocket', 'xhr-multipart', 'htmlfile']
+        //    , transports: ['websocket', 'flashsocket', 'xhr-multipart', 'htmlfile']
             , rememberTransport: false
             , tryTransportsOnConnectTimeout: false 
         });
@@ -83,7 +83,19 @@ NodeChatController = {
                 log('message received: ' + message.data );
                 var newChatEntry = new models.ChatEntry();
                 newChatEntry.mport(message.data);
-                this.model.chats.add(newChatEntry);
+
+                //Find the correct topic
+                var topic = this.model.topics.find(function(t) {
+                    return t.get('name') == newChatEntry.get('topic');
+                });
+
+                //If it doesn't exist, create it and add it to the current list
+                if (!topic) {
+                    topic = new models.TopicModel({name: newChatEntry.get('topic')});
+                    this.model.topics.add(topic);
+                }
+
+                topic.chats.add(newChatEntry);
                 break;
 
             case 'user:add':
@@ -104,14 +116,6 @@ NodeChatController = {
                 //Because we don't have the actual model, find anything with the same name and remove it
                 var users = this.model.users.filter(function (u) { return u.get('name').toLowerCase() == sUser.get('name').toLowerCase(); });
                 this.model.users.remove(users);
-                break;
-
-            case 'direct':
-                log('direct received: ' + message.data );
-                var newDirect = new models.ChatEntry();
-                newDirect.mport(message.data);
-                this.model.directs.add(newDirect);
-
                 break;
 
             case 'disconnect':

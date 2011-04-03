@@ -15,63 +15,54 @@
     //
     
     models.ChatEntry = Backbone.Model.extend({});
-    
-    //Users have references to their direct chats
-    models.User = Backbone.Model.extend({
-        initialize: function() {
-            this.directs = new models.ChatCollection(); 
-            this.followedMashTags = new models.MashChatCollection(); 
+
+    models.TopicModel = Backbone.Model.extend({
+        initialize: function () {
+            this.chats = new models.ChatCollection(); 
+            this.chats.comparator = datetimeComparator;
         }
     });
+    
+    models.User = Backbone.Model.extend({});
 
     models.NodeChatModel = Backbone.Model.extend({
         initialize: function() {
-            this.chats = new models.ChatCollection(); 
-            this.chats.comparator = chatComparator;
+            this.topics = new models.TopicCollection(); 
+            this.topics.comparator = nameComparator;
 
-            this.mashes = new models.MashChatCollection(); 
-            this.mashes.comparator = chatComparator;
-
-            this.mashTags = new models.MashTagCollection(); 
-            this.globalMashTags = new models.MashTagCollection(); 
             this.users = new models.UserCollection();
-            this.directs = new models.ChatCollection();  
+            this.users.comparator = nameComparator;
         }
     });
     
-    //Mashtags have references to their chats
-    models.MashTagModel = Backbone.Model.extend({
-        initialize: function() {
-            this.watchingUsers = new models.UserCollection();
-        }
-    });
 
     //
     //Collections
     //
+    //
+    models.TopicCollection = Backbone.Collection.extend({
+        model: models.TopicModel
+    });
 
     models.ChatCollection = Backbone.Collection.extend({
         model: models.ChatEntry
     });
 
-    models.MashChatCollection = Backbone.Collection.extend({
-        model: models.ChatEntry
+    models.UserCollection = Backbone.Collection.extend({
+        model: models.UserModel
     });
 
-    var chatComparator = function(chat) {
-        var datetime = chat.get('datetime');
+    var nameComparator = function (topic) {
+        return topic.get('name');
+    }
+
+    var datetimeComparator = function(chat) {
+        var datetime = chat.get('time');
 
         if(datetime) return datetime;
         else return 0;
     }
 
-    models.MashTagCollection = Backbone.Collection.extend({
-        model: models.MashTagModel
-    });
-    
-    models.UserCollection = Backbone.Collection.extend({
-        model: models.UserModel
-    });
 
     //
     //Model exporting/importing
