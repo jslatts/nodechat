@@ -53,10 +53,10 @@ var ChatView = Backbone.View.extend({
         this.model.bind('all', this.render);
         this.model.view = this;
     }
-, render: function () {
+    , render: function () {
         var text = replaceURLWithHTMLLinks(this.model.get('text'));
         text = replaceURLWithMarkDown(text);
-        $(this.el).html(this.model.get('time') + ' - ' + this.model.get('name') + ': ' + text);
+        $(this.el).html(this.model.get('niceTime') + ' - ' + this.model.get('user') + ': ' + text);
         return this;
     }
     , remove: function () {
@@ -78,42 +78,6 @@ var StatusView = Backbone.View.extend({
         time = ncutils.getClockTime();
         $(this.el).html(time + ' - <em>' + text + ' ' + message + '</em>');
         return this;
-    }
-});
-
-var MashView = Backbone.View.extend({
-    tagName: 'div',
-
-    initialize: function (options) {
-        _.bindAll(this, 'render');
-        this.model.bind('all', this.render);
-        this.model.view = this;
-    }
-
-    , render: function () {
-        $(this.el).html(this.model.get('time') + ' - ' + this.model.get('name') + ': ' + this.model.get('text'));
-        return this;
-    }
-
-    , remove: function () {
-        $(this.el).remove();
-    }
-});
-
-var MashTagView = Backbone.View.extend({
-    initialize: function (options) {
-        _.bindAll(this, 'render');
-        this.model.bind('all', this.render);
-        this.model.view = this;
-    },
-    render: function () {
-        $(this.el).html(this.model.get('name'));
-        $(this.el).css('float', 'left');
-        $(this.el).css('margin-right', '5px');
-        return this;
-    }
-    , remove: function () {
-        $(this.el).remove();
     }
 });
 
@@ -139,7 +103,7 @@ var NodeChatView = Backbone.View.extend({
     , newDirectMessages: 0
 
     , initialize: function (options) {
-        _.bindAll(this, 'addUser', 'removeUser', 'addChat', 'addDirect', 'addMash', 'triggerAutoComplete', 'suggestAutoComplete', 'sendMessages', 'changeDisplayMode');
+        _.bindAll(this, 'addUser', 'removeUser', 'addChat', 'addDirect', 'addMash', 'triggerAutoComplete', 'sendMessages', 'changeDisplayMode');
         this.model.chats.bind('add', this.addChat);
         this.model.chats.bind('remove', this.removeChat);
         this.model.mashTags.bind('add', this.addMashTag);
@@ -163,7 +127,6 @@ var NodeChatView = Backbone.View.extend({
     , events: {
         'submit #message_form' : 'sendMessage'
         , 'keydown #message_form' : 'triggerAutoComplete'
-        , 'keyup #message_form' : 'suggestAutoComplete'
     }
     , changeDisplayMode: function (mode, boxTitle) {
         //If already in progress, try again in a second
@@ -264,33 +227,6 @@ var NodeChatView = Backbone.View.extend({
     }
     , removeChat: function (chat) { chat.view.remove(); }
 
-    , addMash: function (mash) {
-        var view = new MashView({model: mash});
-        $('#mashtag_chat_list').append(view.render().el);
-        $('#mashtag_chat_list')[0].scrollTop = $('#mashtag_chat_list')[0].scrollHeight;
-
-        //remove old ones if we are getting too long
-        if (this.model.mashes.length > 500)
-            this.model.mashes.remove(this.model.mashes.first());
-    }
-    , removeMash: function (mash) { mash.view.remove(); }
-
-    , addMashTag: function (mashTag) {
-        var view = new MashTagView({model: mashTag});
-        $('#mashtag_list').append(view.render().el);
-    }
-    , removeMashTag: function (mashTag) { 
-        mashTag.view.remove();
-    }
-
-    , addGlobalMashTag: function (mashTag) {
-        var view = new MashTagView({model: mashTag});
-        $('#global_mashtag_list').append(view.render().el);
-    }
-    , removeGlobalMashTag: function (mashTag) { 
-        mashTag.view.remove();
-    }
-
     , addDirect: function (direct) {
         var view = new ChatView({model: direct});
         $('#direct_chat_list').append(view.render().el);
@@ -337,11 +273,12 @@ var NodeChatView = Backbone.View.extend({
         if (inputField.val().length > 400)
             return;
 
-        var nameField = $('input[name=user_name]');
-        var chatEntry = new models.ChatEntry({name: nameField.val(), text: inputField.val()});
-        this.socket.send(chatEntry.xport());
+        this.socket.send({
+            event: 'chat'
+            , topic: 'main'
+            , data: inputField.val() 
+        });
 
-        var mashTags = mashlib.getChunksFromString(inputField.val(), '#', true);
         var directs = mashlib.getChunksFromString(inputField.val(), '@', true);
 
         inputField.val('');
@@ -356,32 +293,9 @@ var NodeChatView = Backbone.View.extend({
             });
         
         }
-        if (mashTags.length > 0)
-        {
-            inputField.val(inputField.val() + mashTags.join(' ') + ' ');
-
-            this.chunkSizes = this.chunkSizes.concat(_.map(mashTags, function (m) {
-                return m.length;
-            }));
-        }
-
         this.clearAlerts(-1);
     }
-    , suggestAutoComplete: function (key) {
-        var inputField = $('input[name=message]');
 
-//        if(inputField.val().length >= 1 && inputField.val()[0] == '#' ) {
-//            var chunk = mashlib.getChunksFromString(inputField.val(), '#', 0, true)[0];
-//            this.changeDisplayMode('mash', chunk);
-//        }
-        if(inputField.val().length >= 1 && inputField.val()[0] == '@' ) {
-            var chunk = mashlib.getChunksFromString(inputField.val(), '@', 0, true)[0];
-            this.changeDisplayMode('direct', chunk);
-        } 
-        else {
-            this.changeDisplayMode('main', '#main');
-        }
-    }
     , triggerAutoComplete: function (key) {
         //If backspace has been pressed, and we have some chunks, look into autodelete 
         if(key.keyCode == 8 && this.chunkSizes.length > 0) {
@@ -412,7 +326,6 @@ var NodeChatView = Backbone.View.extend({
                 var currentText = inputField.val();
 
                 var lastAT = currentText.lastIndexOf('@');
-                var lastMT = currentText.lastIndexOf('#');
                 var lastSpace = currentText.lastIndexOf(' ');
 
                 //If we have a @ to handle
@@ -426,20 +339,6 @@ var NodeChatView = Backbone.View.extend({
                     if(match) {
                         inputField.val(currentText.substring(0, lastAT+1) + match.get('name').toLowerCase() + ' ');
                         this.changeDisplayMode('direct', '@' + match.get('name'));
-                    }
-                }
-                //Of if we have a # to handle
-                else if(lastMT > -1 && lastMT > lastSpace)
-                {
-                    var chunk = mashlib.getChunksFromString(currentText, '#', lastMT);
-
-                    var match = this.model.globalMashTags.find(function (t) {
-                        return (t.get('name').toLowerCase().indexOf(chunk) != -1);
-                    });
-
-                    if(match) {
-                        inputField.val(currentText.substring(0, lastMT+1) + match.get('name') + ' ');
-                        //this.changeDisplayMode('mash', '#' + match.get('name'));
                     }
                 }
             }

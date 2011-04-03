@@ -14,7 +14,7 @@
  */
 NodeChatController = {
     init: function (options) {
-        var mySocket, hash, view, trying, connected;
+        var mySocket, hash, user, view, trying, connected;
 
         this.socket = new io.Socket(null, {port: options.port
             , transports: ['websocket', 'flashsocket', 'xhr-multipart', 'htmlfile']
@@ -24,9 +24,10 @@ NodeChatController = {
 
         mySocket = this.socket;
 
-        this.hash = options.hash;
-        hash = this.hash;
+        hash = this.hash = options.hash;
+        user = this.user = options.userName
         log('hash is ' + options.hash);
+        log('user is ' + options.userName);
 
 
         this.model = new models.NodeChatModel();
@@ -37,10 +38,10 @@ NodeChatController = {
 
         this.socket.on('connect', function () { 
             mySocket.send({
-                event: 'clientauthrequest',
-                data: hash
+                event: 'clientauthrequest'
+                , user: user
+                , hash: hash
             });
-            log('hash is ' + hash);
 
             log('Connected! Oh hai!');
             connected = true;
@@ -78,21 +79,11 @@ NodeChatController = {
 
     , msgReceived: function (message) {
         switch (message.event) {
-            case 'initial':
-                this.model.mport(message.data);
-                break;
             case 'chat':
-//                log('chat received: ' + message.data );
+                log('message received: ' + message.data );
                 var newChatEntry = new models.ChatEntry();
                 newChatEntry.mport(message.data);
                 this.model.chats.add(newChatEntry);
-                break;
-
-            case 'mash':
-                log('mash received: ' + message.data );
-                var mashEntry = new models.ChatEntry();
-                mashEntry.mport(message.data);
-                this.model.mashes.add(mashEntry);
                 break;
 
             case 'user:add':
@@ -113,34 +104,6 @@ NodeChatController = {
                 //Because we don't have the actual model, find anything with the same name and remove it
                 var users = this.model.users.filter(function (u) { return u.get('name').toLowerCase() == sUser.get('name').toLowerCase(); });
                 this.model.users.remove(users);
-                break;
-
-            case 'mashtag':
-                log('mashtag received: ' + message.data );
-                var newMashTag = new models.MashTagModel();
-                newMashTag.mport(message.data);
-                this.model.mashTags.add(newMashTag);
-                break;
-
-            case 'mashtag:delete':
-                log('mashtag:delete received for id: ' + message.data );
-                var mashTagToDelete  = new models.MashTagModel();
-                mashTagToDelete.mport(message.data);
-                this.model.mashTags.remove(mashTagToDelete);
-                break;
-
-            case 'globalmashtag':
-                log('globalmashtag received: ' + message.data );
-                var newMashTag = new models.MashTagModel();
-                newMashTag.mport(message.data);
-                this.model.globalMashTags.add(newMashTag);
-                break;
-
-            case 'globalmashtag:delete':
-                log('globalmashtag:delete received for id: ' + message.data );
-                var mashTagToDelete  = new models.MashTagModel();
-                mashTagToDelete.mport(message.data);
-                this.model.globalMashTags.remove(mashTagToDelete);
                 break;
 
             case 'direct':

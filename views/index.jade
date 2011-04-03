@@ -31,13 +31,13 @@ html(lang='en')
       #help
         p @user to send direct messages
           br
-          | #mashtag to subscribe to a topic
+          | #mashtag to start a new a topic
           br
-          | -mashtag to unsubscribe 
+          | -mashtag to unsubscribe from a topic
           br
           a(href='/logout') logout
       h1 nodechat 
-      div#version v0.2.3
+      div#version v0.3.0
 
       #disconnectMessage 
         | disconnected - trying to reconnect...
@@ -70,10 +70,10 @@ html(lang='en')
 
       #global_mashtag_box
         p(style='margin-top:0px')
-          | Global Mashtags
+          | Topics 
         #global_mashtag_list
         br
-        p Followed Mashtags
+        p Followed Topics
         #mashtag_list
 
 
