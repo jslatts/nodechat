@@ -118,12 +118,8 @@ var TopicView = Backbone.View.extend({
         $(this.el).html(this.model.get('name'));
 
         if (this.visible) {
-            log('showing');
+            $('.selected_topic').removeClass('selected_topic');
             $(this.el).addClass('selected_topic');
-        }
-        else {
-            log('hiding');
-            $(this.el).removeClass('selected_topic');
         }
 
         return this;
@@ -185,6 +181,8 @@ var NodeChatView = Backbone.View.extend({
         _.bindAll(this, 'addUser', 'removeUser', 'addTopic', 'removeTopic', 'triggerAutoComplete', 'suggestAutoComplete', 'sendMessages', 'changeDisplayMode');
         this.model.topics.bind('add', this.addTopic);
         this.model.topics.bind('remove', this.removeTopic);
+        this.model.globaltopics.bind('add', this.addGlobalTopic);
+        this.model.globaltopics.bind('remove', this.removeGlobalTopic);
         this.model.users.bind('add', this.addUser);
         this.model.users.bind('remove', this.removeUser);
         this.socket = options.socket;
@@ -296,6 +294,15 @@ var NodeChatView = Backbone.View.extend({
     }
 
     , removeTopic: function (topic) {
+        topic.view.remove();
+    }
+
+    , addGlobalTopic: function (topic) {
+        var view = new TopicView({model: topic});
+        $('#global_topic_list').append(view.render().el);
+    }
+
+    , removeGlobalTopic: function (topic) {
         topic.view.remove();
     }
 

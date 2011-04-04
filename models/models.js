@@ -32,6 +32,9 @@
             this.topics = new models.TopicCollection(); 
             this.topics.comparator = nameComparator;
 
+            this.globaltopics = new models.TopicCollection(); 
+            this.globaltopics.comparator = nameComparator;
+
             this.users = new models.UserCollection();
             this.users.comparator = nameComparator;
         }

@@ -98,6 +98,20 @@ NodeChatController = {
                 topic.chats.add(newChatEntry);
                 break;
 
+            case 'globaltopic':
+                log('globaltopic received');
+                //Find the correct topic
+                var topic = this.model.globaltopics.find(function(t) {
+                    return t.get('name') == message.data;
+                });
+
+                //If it doesn't exist, create it and add it to the global list
+                if (!topic) {
+                    topic = new models.TopicModel({'name': message.data});
+                    this.model.globaltopics.add(topic);
+                }
+                break;
+
             case 'user:join':
                 var user = new models.UserModel();
                 user.mport(message.data);
