@@ -22,13 +22,14 @@ var models = require('./models/models')
     , auth = require('./lib/auth')
     , mashlib = require('./lib/mashlib')
     , messagerouter = require('./lib/messagerouter')
-    , channelmanager= require('./lib/channelmanager');
+    , channelmanager= require('./lib/channelmanager')
+    , usermanager = require('./lib/usermanager');
 
 // Require redis and setup the client 
 var redis = require('redis')
     , rc = redis.createClient();
 
-redis.debug_mode = true;
+redis.debug_mode = false;
 
 rc.on('error', function (err) {
     winston.warn('Error ' + err);
@@ -153,25 +154,15 @@ app.get('/*.(js|css)', function (req, res) {
     res.sendfile('./' + req.url);
 });
 
-// When we have a client that shouldn't be connected, __kick 'em off!__' 
-// 
-// - @param {object} client
-// - @param {function} fn
-function disconnectAndRedirectClient(client, fn) {
-    winston.info('Disconnecting unauthenticated user');
-    client.send({ event: 'disconnect' });
-    client.connection.end();
-    fn();
-    return;
-}
 
 // Event handler for client disconnects. Simply broadcasts the new active client count.
 // 
 // - @param {object} client
 function clientDisconnect(client) {
-    winston.info('[clientDisconnect] disconnecting client: ' + client.sessionId);
-
-    channelmanager.unsubscribeClientFromAllChannels(client);
+    usermanager.userDisconnection(client, function () {
+        winston.info('[clientDisconnect] disconnecting client: ' + client.sessionId);
+        channelmanager.unsubscribeClientFromAllChannels(client);
+    });
 }
 
 function purgatory() {
@@ -208,6 +199,7 @@ function purgatory() {
 // TODO - figure out how to clear purgatory listener 
 socket.on('connection', function (client) {
     var clientPurgatory = purgatory();
+    client.socket = socket; //Once in awhile, we want to reference the socket for broadcasts
 
     client.on('message', function(message) {
         if (clientPurgatory.stillInPurgatory() && message.event === 'clientauthrequest') {
@@ -217,10 +209,15 @@ socket.on('connection', function (client) {
                 channelmanager.setupClientForSubscriptions(client, function () {
                     winston.info('Client ' + client.sessionId + ' setup for pub/sub');
                 });
+
                 channelmanager.subscribeClientToChannel(client, 'main', function (){
                     winston.info('Client ' + client.sessionId + ' subcribed to main topic');
                 });
-                
+               
+
+                usermanager.newUserConnection(client, function() {
+                    winston.info('Client ' + client.sessionId + ' connection setup.');
+                });
                 client.on('disconnect', function () {
                     clientDisconnect(client);
                 });

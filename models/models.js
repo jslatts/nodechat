@@ -23,7 +23,9 @@
         }
     });
     
-    models.User = Backbone.Model.extend({});
+    models.UserModel = Backbone.Model.extend({
+        idAttribute: "name"
+    });
 
     models.NodeChatModel = Backbone.Model.extend({
         initialize: function() {

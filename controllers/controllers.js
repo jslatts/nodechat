@@ -98,28 +98,33 @@ NodeChatController = {
                 topic.chats.add(newChatEntry);
                 break;
 
-            case 'user:add':
-                log('user add received: ' + message.data );
-                var user = new models.User();
+            case 'user:join':
+                var user = new models.UserModel();
                 user.mport(message.data);
 
+
                 //In case of refresh/socket/whatever bugs, only add a user once
-                if(!this.model.users.some(function (u) { return u.get('name').toLowerCase() == user.get('name').toLowerCase(); }))
+                if(!this.model.users.some(function (u) { 
+                    return u.get('name').toLowerCase() == user.get('name').toLowerCase(); 
+                })) {
                     this.model.users.add(user);
+                }
                 break;
 
-            case 'user:remove':
-                log('user:remove received: ' + message.data );
-                var sUser = new models.User();
+            case 'user:leave':
+                var sUser = new models.UserModel();
                 sUser.mport(message.data);
 
                 //Because we don't have the actual model, find anything with the same name and remove it
-                var users = this.model.users.filter(function (u) { return u.get('name').toLowerCase() == sUser.get('name').toLowerCase(); });
-                this.model.users.remove(users);
+                var user = this.model.users.find(function (u) { 
+                    return u.get('name').toLowerCase() == sUser.get('name').toLowerCase(); 
+                });
+
+                this.model.users.remove(user);
+                this.view.displayUserLeaveMessage(sUser);
                 break;
 
             case 'disconnect':
-                log('Received disconnect from server');
                 window.location = '/disconnect';
                 break;
         }

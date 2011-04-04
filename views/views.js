@@ -69,28 +69,29 @@ var StatusView = Backbone.View.extend({
         _.bindAll(this, 'render');
         this.userName = options.userName;
         this.statusMessage = options.statusMessage;
+        this.niceTime = options.niceTime;
     }
     , render: function () {
         var text, message, time;
 
         text = this.userName;
         message = this.statusMessage;
-        time = ncutils.getClockTime();
+        time = this.niceTime;
         $(this.el).html(time + ' - <em>' + text + ' ' + message + '</em>');
         return this;
     }
 });
 
 var UserView = Backbone.View.extend({
-    initialize: function (options) {
+    className: 'user_model'
+
+    , initialize: function (options) {
         _.bindAll(this, 'render');
         this.model.bind('all', this.render);
         this.model.view = this;
     }
     , render: function () {
         $(this.el).html(this.model.get('name'));
-        $(this.el).css('float', 'left');
-        $(this.el).css('margin-right', '5px');
         return this;
     }
     , remove: function () {
@@ -179,7 +180,7 @@ var TopicView = Backbone.View.extend({
 
 var NodeChatView = Backbone.View.extend({
     initialize: function (options) {
-        var main, that, currentDisplayTopic, chunkSize;
+        var main, that;
 
         _.bindAll(this, 'addUser', 'removeUser', 'addTopic', 'removeTopic', 'triggerAutoComplete', 'suggestAutoComplete', 'sendMessages', 'changeDisplayMode');
         this.model.topics.bind('add', this.addTopic);
@@ -189,6 +190,7 @@ var NodeChatView = Backbone.View.extend({
         this.socket = options.socket;
         this.userName = options.userName;
         this.chunkSize = 0;
+        this.currentDisplayTopic = null;
 
         //Always start with 'main' by default so we have something to display
         main = new models.TopicModel({name: 'main'});
@@ -225,11 +227,11 @@ var NodeChatView = Backbone.View.extend({
         //Fade out, load the chats, then fade in
         $('#chat_box').fadeOut(100, function () {
 
-            if (this.currentDisplayTopic) {
-                this.currentDisplayTopic.view.hide();
+            if (that.currentDisplayTopic) {
+                that.currentDisplayTopic.view.hide();
             }
 
-            this.currentDisplayTopic = topic ;
+            that.currentDisplayTopic = topic ;
 
             topic.view.renderAllChats(); //then render the new one. This will automatically set visible = true
 
@@ -302,15 +304,19 @@ var NodeChatView = Backbone.View.extend({
         $('#user_list').append(view.render().el);
         $('#user_count').html(this.model.users.length + ' ');
 
-        var view = new StatusView({userName: user.get('name'), statusMessage: 'has joined nodechat'});
-        $('#chat_list').append(view.render().el);
-        $('#chat_list')[0].scrollTop = $('#chat_list')[0].scrollHeight;
+        if (!user.get('preExist')) {
+            var view = new StatusView({userName: user.get('name'), niceTime: user.get('niceTime'), statusMessage: 'has joined nodechat'});
+            $('#chat_list').append(view.render().el);
+            $('#chat_list')[0].scrollTop = $('#chat_list')[0].scrollHeight;
+        }
     }
     , removeUser: function (user) { 
         user.view.remove();
         $('#user_count').html(this.model.users.length + ' ');
+    }
 
-        var view = new StatusView({userName: user.get('name'), statusMessage: 'has left nodechat'});
+    , displayUserLeaveMessage: function (user) {
+        var view = new StatusView({userName: user.get('name'), niceTime: user.get('niceTime'), statusMessage: 'has left nodechat'});
         $('#chat_list').append(view.render().el);
         $('#chat_list')[0].scrollTop = $('#chat_list')[0].scrollHeight;
     }
@@ -330,13 +336,12 @@ var NodeChatView = Backbone.View.extend({
 
 
         //Check to see if we have a direct or a topic chat and retain the prefix
-        delimiter = '@';
-        match = mashlib.getChunksAtStartOfString(inputField.val(), delimiter, false);
+        delimiter = ''; //Don't specify a delimiter for @s, because we want to include them in the topic name
+        match = mashlib.getChunksAtStartOfString(inputField.val(), '@', true);
 
         if (!match) {
             delimiter = '#';
             match = mashlib.getChunksAtStartOfString(inputField.val(), delimiter, false); 
-            if (match) log('match found');
         }
 
         inputField.val('');
@@ -355,10 +360,8 @@ var NodeChatView = Backbone.View.extend({
                 topic = new models.TopicModel({name: match});
                 this.currentDisplayTopic = topic;
                 this.model.topics.add(topic);
-                log('[sendMessage] set currentDisplayTopic ' + topic.get('name'));
             }
             else {
-                log('[sendMessage] change display to ' + topic.get('name'));
                 this.changeDisplayMode(topic);
             }
 
@@ -367,23 +370,27 @@ var NodeChatView = Backbone.View.extend({
         this.clearAlerts(-1);
     }
     , suggestAutoComplete: function(key) {
-        var inputField = $('input[name=message]');
+        var inputField, chunk;
+        inputField = $('input[name=message]');
 
-        if(inputField.val().length >= 1 && inputField.val()[0] == '#' ) {
-            var chunk = mashlib.getChunksFromString(inputField.val(), '#', 0, true)[0];
+        if(inputField.val().length >= 1 && ( inputField.val()[0] == '#' || inputField.val()[0] == '@' )) {
+
+            //First try for a topic
+            chunk = mashlib.getChunksAtStartOfString(inputField.val(), '#', false);
+
+            //Then try for a direct
+            if(!chunk) {
+                chunk = mashlib.getChunksFromString(inputField.val(), '@', true);
+            }
 
             var topic = this.model.topics.find(function(t) {
                 return t.get('name') === chunk;
             });
 
             if (topic) {
-                this.changeDisplayMode(chunk);
+                this.changeDisplayMode(topic);
             }
         }
-        if(inputField.val().length >= 1 && inputField.val()[0] == '@' ) {
-            var chunk = mashlib.getChunksFromString(inputField.val(), '@', 0, true)[0];
-            this.changeDisplayMode(chunk);
-        } 
     }
     , triggerAutoComplete: function (key) {
         //If backspace has been pressed, and we have some chunks, look into autodelete 
@@ -414,7 +421,7 @@ var NodeChatView = Backbone.View.extend({
                 var currentText = inputField.val();
 
                 //If we have a @ to handle
-                var chunk = mashlib.getChunksAtStartOfString(currentText, '@', false);
+                var chunk = mashlib.getChunksAtStartOfString(currentText, '@', true);
                 if (chunk) {
                     var match = this.model.users.find(function (u) {
                         return (u.get('name').toLowerCase().indexOf(chunk) != -1);
