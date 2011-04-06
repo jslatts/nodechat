@@ -9,8 +9,6 @@ Here it the roadmap for the next week or so. Any suggestions or bug fixes are we
 TODO:
 
  - Total History
- - Persist/restore directs/channel subscriptions
- - Persist/restore channel/direct data
  - Implement UX to display historical data in channels, DMs
  - away messages
  - Handle old users accounts (ehh maybe not)
@@ -20,7 +18,7 @@ TODO:
 Horrible bugs:
 
  - user names with spaces can't be direct messaged
- - backspaces jump out of channel
+ - Fix pulse on new topic 
 
 
             bug    

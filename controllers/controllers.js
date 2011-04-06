@@ -84,6 +84,11 @@ NodeChatController = {
                 var newChatEntry = new models.ChatEntry();
                 newChatEntry.mport(message.data);
 
+                //Check if we are reloading/connecting and flag the chat accordingly
+                if (message.reload) {
+                    newChatEntry.set({'reload': true});
+                }
+
                 //Find the correct topic
                 var topic = this.model.topics.find(function(t) {
                     return t.get('name') == newChatEntry.get('topic');
@@ -99,7 +104,6 @@ NodeChatController = {
                 break;
 
             case 'globaltopic':
-                log('globaltopic received');
                 //Find the correct topic
                 var topic = this.model.globaltopics.find(function(t) {
                     return t.get('name') == message.data;
@@ -108,8 +112,18 @@ NodeChatController = {
                 //If it doesn't exist, create it and add it to the global list
                 if (!topic) {
                     topic = new models.TopicModel({'name': message.data});
+
+                    if (message.reload) {
+                        topic.set({'reload': true});
+                    }
+
                     this.model.globaltopics.add(topic);
                 }
+
+                break;
+
+            case 'globaltopic:message':
+                //Check if we are reloading/connecting and flag accodingly
                 break;
 
             case 'user:join':

@@ -99,6 +99,20 @@ var UserView = Backbone.View.extend({
     }
 });
 
+//Helper function to pulse an element count times
+var pulse = function (element, count) { 
+    $(element).fadeOut(900, 'swing', function () {
+        $(element).fadeIn(900, 'linear', function () {
+            if (count > 0) {
+                count -= 1;
+                var timeout = setTimeout(function() {
+                    return pulse(element, count);
+                }, 3000);
+            }
+        });
+    });
+}
+
 var TopicView = Backbone.View.extend({
     className: 'topic'
     , initialize: function (options) {
@@ -136,6 +150,9 @@ var TopicView = Backbone.View.extend({
             var view = new ChatView({model: chat});
             $('#chat_list').append(view.render().el);
             $('#chat_list')[0].scrollTop = $('#chat_list')[0].scrollHeight;
+        }
+        else if (!chat.get('reload')) {
+            pulse(this.el, 10);
         }
         
         //remove old ones if we are getting too long
@@ -297,8 +314,15 @@ var NodeChatView = Backbone.View.extend({
     }
 
     , addGlobalTopic: function (topic) {
-        var view = new TopicView({model: topic});
-        $('#global_topic_list').append(view.render().el);
+        var view, renderedView;
+
+        view = new TopicView({model: topic});
+        renderedView = view.render().el;
+        $('#global_topic_list').append(renderedView);
+
+        if (!topic.get('reload')) {
+            pulse(renderedView, 1);
+        }
     }
 
     , removeGlobalTopic: function (topic) {
