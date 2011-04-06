@@ -132,7 +132,6 @@ var TopicView = Backbone.View.extend({
     //Adds a new chat view to the topic. 
     //If topic.visible is not set to true, only trim the collection and flag the newMessage event
     , addChat: function (chat) {
-        log('[addChat] vis' + this.visible);
         if (this.visible) {
             var view = new ChatView({model: chat});
             $('#chat_list').append(view.render().el);
@@ -380,7 +379,7 @@ var NodeChatView = Backbone.View.extend({
         var inputField, chunk;
         inputField = $('input[name=message]');
 
-        if(inputField.val().length >= 1 && ( inputField.val()[0] == '#' || inputField.val()[0] == '@' )) {
+        if(inputField.val().length >= 1 && ( inputField.val()[0] === '#' || inputField.val()[0] === '@' )) {
 
             //First try for a topic
             chunk = mashlib.getChunksAtStartOfString(inputField.val(), '#', false);
@@ -401,11 +400,11 @@ var NodeChatView = Backbone.View.extend({
     }
     , triggerAutoComplete: function (key) {
         //If backspace has been pressed, and we have some chunks, look into autodelete 
-        if(key.keyCode == 8 && this.chunkSize > 0) {
+        if(key.keyCode === 8 && this.chunkSize > 0) {
             var inputField = $('input[name=message]');
 
             //Only autodelete if we are right after the chunks
-            if (inputField.val().length == this.chunkSize + 1); 
+            if (inputField.val().length === this.chunkSize + 1); 
             {
                 inputField.val('');
                 this.chunkSize = 0;
@@ -420,6 +419,7 @@ var NodeChatView = Backbone.View.extend({
                 }
             }
         } 
+        //If the tab key has been pressed, try and complete
         else if(key.keyCode == 9) {
             key.preventDefault();
 
@@ -436,6 +436,7 @@ var NodeChatView = Backbone.View.extend({
 
                     if(match) {
                         inputField.val('@' + match.get('name').toLowerCase() + ' ');
+                        this.chunkSize = match.get('name').length + 1; //Set the chunksize so we can backspace out if we want
                         this.changeDisplayMode(match);
                     }
                 }
@@ -449,6 +450,7 @@ var NodeChatView = Backbone.View.extend({
 
                         if(match) {
                             inputField.val('#' + match.get('name') + ' ');
+                            this.chunkSize = match.get('name').length + 1; //Set the chunksize so we can backspace out if we want
                             this.changeDisplayMode(match);
                         }
                     }
