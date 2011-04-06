@@ -444,9 +444,17 @@ var NodeChatView = Backbone.View.extend({
                 {
                     var chunk = mashlib.getChunksFromString(currentText, '#', false);
                     if (chunk) {
+                        //Search subscribed topics
                         var match = this.model.topics.find(function(t) {
                             return (t.get('name').toLowerCase().indexOf(chunk) != -1);
                         });
+
+                        //Then try global topics
+                        if (!match) {
+                            match = this.model.globaltopics.find(function(t) {
+                                return (t.get('name').toLowerCase().indexOf(chunk) != -1);
+                            });
+                        }
 
                         if(match) {
                             inputField.val('#' + match.get('name') + ' ');
