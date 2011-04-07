@@ -171,6 +171,10 @@ function purgatory() {
     var inPurgatory = true;
     return {
         tryToGetOut: function (message, client, cb) {
+            if (!message || !message.user || !message.hashpassword) {
+                winston.info('[purgatory][tryToGetOut] Client with no user/hash attempting message. Client still in purgatory');
+                return;
+            }
             auth.authenticateUserByHash(message.user, message.hashpassword, function(err, data) {
                 if (err) {
                     winston.info('[purgatory] Bad auth. Client still in purgatory');
@@ -184,9 +188,7 @@ function purgatory() {
                     client.user = message.user;
                     client.hashpassword = message.hashpassword;
 
-                    if (cb) {
-                        return cb();
-                    }
+                    cb && cb();
                 }
             });
         }
