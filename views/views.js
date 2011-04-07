@@ -123,7 +123,6 @@ var TopicView = Backbone.View.extend({
         this.bind('topic:hide', this.render);
         this.model.view = this;
 
-        this.newMessages = 0;
         this.visible = options.visible; //By default, don't render a topic
     }
 
@@ -160,10 +159,7 @@ var TopicView = Backbone.View.extend({
             this.model.chats.remove(this.model.chats.first());
 
         //Keep track of whether we have a new message and emit an event if we do
-        this.newMessages += 1;
-        if(this.newMessages > 0) {
-            this.trigger('topic:message');
-        }
+        this.trigger('topic:message');
     }
 
     , removeChat: function (chat) { 
@@ -197,10 +193,12 @@ var NodeChatView = Backbone.View.extend({
         _.bindAll(this, 'addUser', 'removeUser', 'addTopic', 'removeTopic', 'triggerAutoComplete', 'suggestAutoComplete', 'sendMessages', 'changeDisplayMode');
         this.model.topics.bind('add', this.addTopic);
         this.model.topics.bind('remove', this.removeTopic);
+        this.model.topics.bind('topic:message', this.topicReceivedMessage);
         this.model.globaltopics.bind('add', this.addGlobalTopic);
         this.model.globaltopics.bind('remove', this.removeGlobalTopic);
         this.model.users.bind('add', this.addUser);
         this.model.users.bind('remove', this.removeUser);
+        this.newMessages = 0;
         this.socket = options.socket;
         this.userName = options.userName;
         this.chunkSize = 0;
@@ -254,7 +252,6 @@ var NodeChatView = Backbone.View.extend({
         });
     }
     , clearAlerts: function (count) {
-        document.title = 'nodechat';
         this.newMessages = count;
         this.newDirectMessages = 0;
 
@@ -282,7 +279,8 @@ var NodeChatView = Backbone.View.extend({
         }
     }
     , setMsgAlert: function () {
-        if(!this.msgAlert) {
+        this.newMessages += 1;
+        if(this.newMessages > 0 && !this.msgAlert) {
             this.msgAlert = setInterval(function () {
                 log('set msg alert');
                 if (document.title == 'nodechat')
