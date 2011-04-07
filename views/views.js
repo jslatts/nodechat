@@ -428,8 +428,7 @@ var NodeChatView = Backbone.View.extend({
             var inputField = $('input[name=message]');
 
             //Only autodelete if we are right after the chunks
-            if (inputField.val().length === this.chunkSize + 1); 
-            {
+            if (inputField.val().length === (this.chunkSize + 1)) {
                 inputField.val('');
                 this.chunkSize = 0;
 
