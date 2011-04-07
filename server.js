@@ -209,16 +209,16 @@ socket.on('connection', function (client) {
             clientPurgatory.tryToGetOut(message, client, function () {
                 channelmanager.setupClientForSubscriptions(client, function () {
                     winston.info('Client ' + client.sessionId + ' setup for pub/sub');
+
+                    channelmanager.subscribeClientToChannel(client, 'main', function (){
+                        winston.info('Client ' + client.sessionId + ' subcribed to main topic');
+                    });
+
+                    usermanager.newUserConnection(client, function() {
+                        winston.info('Client ' + client.sessionId + ' connection setup.');
+                    });
                 });
 
-                channelmanager.subscribeClientToChannel(client, 'main', function (){
-                    winston.info('Client ' + client.sessionId + ' subcribed to main topic');
-                });
-               
-
-                usermanager.newUserConnection(client, function() {
-                    winston.info('Client ' + client.sessionId + ' connection setup.');
-                });
                 client.on('disconnect', function () {
                     clientDisconnect(client);
                 });
