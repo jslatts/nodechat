@@ -22,7 +22,7 @@ html(lang='en')
       }
 
       $(document).ready(function () { 
-        window.app = NodeChatController.init({port: !{locals.port}, hash: !{locals.hash}, userName: '!{locals.name}'}); 
+        window.app = NodeChatController.init({port: !{locals.port}, hashpassword: !{locals.hashpassword}, userName: '!{locals.name}'}); 
         $('input:text:first:visible').focus();  
         
       });

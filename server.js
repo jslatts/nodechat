@@ -107,9 +107,9 @@ function signInAccount(req, res) {
                 req.session.cookie.maxAge = 100 * 24 * 60 * 60 * 1000; //Force longer cookie age
                 req.session.cookie.httpOnly = false;
                 req.session.user = user;
-                req.session.hash = user.hashPass || 'No Hash';
+                req.session.hashpassword = user.hashPass || 'No Hash';
 
-                winston.info('Storing new hash for user ' + user.name + ': ' + req.session.hash);
+                winston.info('Storing new hash for user ' + user.name + ': ' + req.session.hashpassword);
                 res.redirect('/');
             });
         } 
@@ -171,7 +171,7 @@ function purgatory() {
     var inPurgatory = true;
     return {
         tryToGetOut: function (message, client, cb) {
-            auth.authenticateUserByHash(message.user, message.hash, function(err, data) {
+            auth.authenticateUserByHash(message.user, message.hashpassword, function(err, data) {
                 if (err) {
                     winston.info('[purgatory] Bad auth. Client still in purgatory');
                     inPurgatory = true;
@@ -182,7 +182,7 @@ function purgatory() {
 
                     //Once we are sure the client is who s/he claims to be, attach name and hash for future use.
                     client.user = message.user;
-                    client.hash = message.hash;
+                    client.hashpassword = message.hashpassword;
 
                     if (cb) {
                         return cb();
@@ -270,7 +270,7 @@ path.exists(config_file, function (exists) {
 
     app.get('/', restrict, function (req, res) {
         res.render('index', {
-            locals: { name: req.session.user.name, port: port, hash: JSON.stringify(req.session.hash) }
+            locals: { name: req.session.user.name, port: port, hashpassword: JSON.stringify(req.session.hashpassword) }
         });
     });
 });

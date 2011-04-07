@@ -14,7 +14,7 @@
  */
 NodeChatController = {
     init: function (options) {
-        var mySocket, hash, user, view, trying, connected;
+        var mySocket, hashpassword, user, view, trying, connected;
 
         this.socket = new io.Socket(null, {port: options.port
         //    , transports: ['websocket', 'flashsocket', 'xhr-multipart', 'htmlfile']
@@ -24,9 +24,9 @@ NodeChatController = {
 
         mySocket = this.socket;
 
-        hash = this.hash = options.hash;
+        hashpassword = this.hashpassword = options.hashpassword
         user = this.user = options.userName
-        log('hash is ' + options.hash);
+        log('hash is ' + options.hashpassword);
         log('user is ' + options.userName);
 
 
@@ -40,7 +40,7 @@ NodeChatController = {
             mySocket.send({
                 event: 'clientauthrequest'
                 , user: user
-                , hash: hash
+                , hashpassword: hashpassword
             });
 
             log('Connected! Oh hai!');
