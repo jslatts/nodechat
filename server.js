@@ -90,42 +90,12 @@ app.get('/disconnect', function (req, res) {
     res.render('disconnect');
 });
 
-// Route: GET /signup
-// Template: signup.jade 
-app.get('/signup', function (req, res) {
-    winston.info('GET /signup');
-    res.render('signup');
-});
-
-// Route: POST /signup
-//
-// Calls createNewUserAccount() in the auth module, redirects to /login if a user object is returned. Redirects to /signup if not.
-app.post('/signup', function (req, res) {
-    auth.createNewUserAccount(req.body.username, req.body.password1, req.body.password2, req.body.email, function (err, user) {
-        if ((err) || (!user)) {
-            req.session.error = 'New user failed, please check your username and password.';
-            res.redirect('back');
-        }
-        else if (user) {
-            res.redirect('/login');
-        }
-    });
-});
-
-// Route: GET /login
-// Template: login.jade 
-app.get('/login', function (req, res) {
-    winston.info('GET /login');
-    res.render('login');
-});
-
-// Route: POST /login
-//
-// Calls the authentication module to verify login details. Failures are redirected back to the login page.
-//
-// If the authentication module gives us a user object back, we ask connect to regenerate the session and send the client back to index. Note: we specify a _long_ cookie age so users won't have to log in frequently. We also set the httpOnly flag to false (I know, not so secure) to make the cookie available over [Flash Sockets](http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/net/Socket.html).
-app.post('/login', function (req, res) {
+function signInAccount(req, res) {
     auth.authenticateUser(req.body.username, req.body.password, function (err, user) {
+        if (err) {
+            winston.error('[signInAccount][authenticateUser][fn] Error: ' + err);
+        }
+
         if (user) {
             // Regenerate session when signing in
             // to prevent fixation 
@@ -142,11 +112,43 @@ app.post('/login', function (req, res) {
                 winston.info('Storing new hash for user ' + user.name + ': ' + req.session.hash);
                 res.redirect('/');
             });
-        } else {
+        } 
+        else {
             req.session.error = 'Authentication failed, please check your username and password.';
             res.redirect('back');
         }
     });
+}
+
+// Route: POST /signup
+//
+// Calls createNewUserAccount() in the auth module, then logins in the user without prompting again for password
+app.post('/signup', function (req, res) {
+    auth.createNewUserAccount(req.body.username, req.body.password, req.body.email, function (err, user) {
+        if ((err) || (!user)) {
+            req.session.error = 'New user failed, please check your username and password.';
+            res.redirect('back');
+        }
+        else if (user) {
+            signInAccount(req, res);
+        }
+    });
+});
+
+// Route: GET /login
+// Template: login.jade 
+app.get('/login', function (req, res) {
+    winston.info('GET /login');
+    res.render('login');
+});
+
+// Route: POST /login
+//
+// Calls the authentication module to verify login details. Failures are redirected back to the login page.
+//
+// If the authentication module gives us a user object back, we ask connect to regenerate the session and send the client back to index. Note: we specify a _long_ cookie age so users won't have to log in frequently. We also set the httpOnly flag to false (I know, not so secure) to make the cookie available over [Flash Sockets](http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/net/Socket.html).
+app.post('/login', function(req, res) {
+    signInAccount(req, res)
 });
 
 // Serve up any static file requested by the client
@@ -196,7 +198,6 @@ function purgatory() {
 }
 
 // Handle the new connection event for socket by putting the client in purgatory until they auth. 
-// TODO - figure out how to clear purgatory listener 
 socket.on('connection', function (client) {
     var clientPurgatory = purgatory();
     client.socket = socket; //Once in awhile, we want to reference the socket for broadcasts
