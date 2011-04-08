@@ -29,6 +29,9 @@ NodeChatController = {
         log('hash is ' + options.hashpassword);
         log('user is ' + options.userName);
 
+        //Records the client version to support auto-updates
+        versio = this.version = options.version;
+
 
         this.model = new models.NodeChatModel();
         this.view = new NodeChatView({model: this.model, socket: this.socket, el: $('#content'), userName: options.userName});
@@ -154,6 +157,15 @@ NodeChatController = {
 
             case 'disconnect':
                 window.location = '/disconnect';
+                break;
+
+            //If we get a new version message, wait a few seconds for the server to finish loading, then reload the client
+            case 'version':
+                if (this.version && this.version !== message.data) {
+                    setTimeout(function() {
+                            window.location.reload();
+                    }, 5000);
+                }
                 break;
         }
     }

@@ -3,6 +3,7 @@
 // MIT Licensed
 
 // Global settings
+var version = '0.3.6';
 var dev_port = 8000;
 var server_port = 80;
 var config_file = '/home/node/nodechat_config';
@@ -204,6 +205,12 @@ socket.on('connection', function (client) {
     var clientPurgatory = purgatory();
     client.socket = socket; //Once in awhile, we want to reference the socket for broadcasts
 
+    //Inform the client of the current version
+    client.send({
+        event: 'version'
+        , data: version
+    });
+
     client.on('message', function(message) {
         if (clientPurgatory.stillInPurgatory() && message.event === 'clientauthrequest') {
 
@@ -263,16 +270,15 @@ path.exists(config_file, function (exists) {
         });
     }
     else {
-        winston.info('config found. starting in server mode');
+        winston.info('[main] config found. starting in server mode');
         app.listen(server_port);
         port = server_port;
     }
 
-    winston.info('listening on port ' + port);
-
+    winston.info('[main] nodechat v' + version + ' listening on port ' + port);
     app.get('/', restrict, function (req, res) {
         res.render('index', {
-            locals: { name: req.session.user.name, port: port, hashpassword: JSON.stringify(req.session.hashpassword) }
+            locals: { name: req.session.user.name, port: port, hashpassword: JSON.stringify(req.session.hashpassword), version: version  }
         });
     });
 });

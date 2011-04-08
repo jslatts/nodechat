@@ -17,8 +17,6 @@ Horrible bugs:
 
  - user names with spaces can't be direct messaged
  - Fix pulse on new topic 
- - Fix terrible hash password migration issue
- - Alert bug
 
 
             bug    

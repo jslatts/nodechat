@@ -22,7 +22,7 @@ html(lang='en')
       }
 
       $(document).ready(function () { 
-        window.app = NodeChatController.init({port: !{locals.port}, hashpassword: !{locals.hashpassword}, userName: '!{locals.name}'}); 
+        window.app = NodeChatController.init({port: !{locals.port}, hashpassword: !{locals.hashpassword}, userName: '!{locals.name}', version: '!{locals.version}' }); 
         $('input:text:first:visible').focus(function() {
             window.app.view.clearAlerts(0);
         });  
@@ -39,7 +39,7 @@ html(lang='en')
           br
           a(href='/logout') logout
       h1 nodechat 
-      div#version v0.3.0
+      div#version v!{locals.version}
 
       #disconnectMessage 
         | disconnected - trying to reconnect...
