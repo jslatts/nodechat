@@ -1,10 +1,8 @@
-If you are following the tutorial on fzysqr.com, make sure to use the v0.1 tag.
+If you are following the tutorials on fzysqr.com, you may want the [tutorial version](https://github.com/jslatts/nodechat-tutorial) of nodechat.
 
-Visit http://nodechat.no.de/ for a live demo of the latest version.
+Visit [http://nodechat.no.de/](http://nodechat.no.de/) to see this code in action. You can even ask node.js questions!
 
-Here it the roadmap for the next week or so. Any suggestions or bug fixes are welcome!
-
-**WARNING** - Current unstable branch is actually unstable. It will break auth for old users. Should work fine for new users.
+Here is the roadmap. Any suggestions or bug fixes are welcome.
 
 TODO:
 
@@ -20,9 +18,9 @@ Horrible bugs:
  - Fix pulse on new topic 
 
 
-            bug    
+      bug with laser eyes   
    ,,,,,,,,,,,,,,,,,,,,,,,  \   /
- / (  (  (  (  (  (  (  (  \( = =)
+ / (  (  (  (  (  (  (  (  \( = =)--------------***kabooom
 <  (  (  (  (  (  (  (  (  / ( ^ )
  \ (__(__(__(__(__(__(__(__)   ~
    ^  ^  ^  ^  ^  ^  ^  ^  ^

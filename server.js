@@ -232,7 +232,7 @@ socket.on('connection', function (client) {
                     client.on('disconnect', function () {
                         clientDisconnect(client);
                     });
-                }});
+                });
             }
         }
         else {
