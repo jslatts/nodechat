@@ -212,26 +212,28 @@ socket.on('connection', function (client) {
     });
 
     client.on('message', function(message) {
-        if (clientPurgatory.stillInPurgatory() && message.event === 'clientauthrequest') {
+        if (clientPurgatory.stillInPurgatory()) {
+            //Only respond to attempted auths
+            if(message.event === 'clientauthrequest') {
+                //If we can get out of purgatory, set up the client for pubsub
+                clientPurgatory.tryToGetOut(message, client, function () {
+                    channelmanager.setupClientForSubscriptions(client, function () {
+                        winston.info('Client ' + client.sessionId + ' setup for pub/sub');
 
-            //If we can get out of purgatory, set up the client for pubsub
-            clientPurgatory.tryToGetOut(message, client, function () {
-                channelmanager.setupClientForSubscriptions(client, function () {
-                    winston.info('Client ' + client.sessionId + ' setup for pub/sub');
+                        channelmanager.subscribeClientToChannel(client, 'main', function (){
+                            winston.info('Client ' + client.sessionId + ' subcribed to main topic');
+                        });
 
-                    channelmanager.subscribeClientToChannel(client, 'main', function (){
-                        winston.info('Client ' + client.sessionId + ' subcribed to main topic');
+                        usermanager.newUserConnection(client, function() {
+                            winston.info('Client ' + client.sessionId + ' connection setup.');
+                        });
                     });
 
-                    usermanager.newUserConnection(client, function() {
-                        winston.info('Client ' + client.sessionId + ' connection setup.');
+                    client.on('disconnect', function () {
+                        clientDisconnect(client);
                     });
-                });
-
-                client.on('disconnect', function () {
-                    clientDisconnect(client);
-                });
-            });
+                }});
+            }
         }
         else {
             messagerouter.handleMessage(message, client, function (err, data) {});

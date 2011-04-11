@@ -449,7 +449,7 @@ var NodeChatView = Backbone.View.extend({
                 var currentText = inputField.val();
 
                 //If we have a @ to handle
-                var chunk = mashlib.getChunksAtStartOfString(currentText, '@', true);
+                var chunk = mashlib.getChunksAtStartOfString(currentText, '@', false);
                 if (chunk) {
                     var match = this.model.users.find(function (u) {
                         return (u.get('name').toLowerCase().indexOf(chunk) != -1);
@@ -463,7 +463,7 @@ var NodeChatView = Backbone.View.extend({
                 }
                 else
                 {
-                    var chunk = mashlib.getChunksFromString(currentText, '#', false);
+                    var chunk = mashlib.getChunksAtStartOfString(currentText, '#', false);
                     if (chunk) {
                         //Search subscribed topics
                         var match = this.model.topics.find(function(t) {
