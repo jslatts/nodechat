@@ -1,0 +1,29 @@
+If you are following the tutorials on fzysqr.com, you may want the [tutorial version](https://github.com/jslatts/nodechat-tutorial) of nodechat.
+
+Visit [http://nodechat.no.de/](http://nodechat.no.de/) to see this code in action. You can even ask node.js questions!
+
+Here is the roadmap. Any suggestions or bug fixes are welcome.
+
+TODO:
+
+ - Total History
+ - away messages
+ - Flood control
+ - User bans
+
+Horrible bugs:
+
+ - user names with spaces can't be direct messaged
+ - direct messages totally b0rked
+ - Fix pulse on new topic 
+
+
+      bug with laser eyes   
+   ,,,,,,,,,,,,,,,,,,,,,,,  \   /
+ / (  (  (  (  (  (  (  (  \( = =)--------------***kabooom
+<  (  (  (  (  (  (  (  (  / ( ^ )
+ \ (__(__(__(__(__(__(__(__)   ~
+   ^  ^  ^  ^  ^  ^  ^  ^  ^
+
+
+-jslatts
