@@ -455,10 +455,17 @@ var NodeChatView = Backbone.View.extend({
                         return (u.get('name').toLowerCase().indexOf(chunk) != -1);
                     });
 
-                    if(match) {
+                    if (match) {
                         inputField.val('@' + match.get('name').toLowerCase() + ' ');
                         this.chunkSize = match.get('name').length + 1; //Set the chunksize so we can backspace out if we want
-                        this.changeDisplayMode(match);
+
+                        var topicMatch = this.model.topics.find(function (t) {
+                            return t.get('name') === '@' + match.get('name');
+                        });
+
+                        if (topicMatch) {
+                            this.changeDisplayMode(topicMatch);
+                        }
                     }
                 }
                 else
