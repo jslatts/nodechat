@@ -106,6 +106,20 @@ NodeChatController = {
                 topic.chats.add(newChatEntry);
                 break;
 
+            case 'topic:unsubscribe':
+                log('here' + message.data);
+                //Find the correct topic
+                var topic = this.model.topics.find(function(t) {
+                    return t.get('name') == message.topic;
+                });
+
+                //If it doesn't exist, create it and add it to the current list
+                if (topic) {
+                    this.model.topics.remove(topic);
+                }
+
+                break;
+
             case 'globaltopic':
                 //Find the correct topic
                 var topic = this.model.globaltopics.find(function(t) {

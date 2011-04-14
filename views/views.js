@@ -421,17 +421,19 @@ var NodeChatView = Backbone.View.extend({
         }
     }
     , triggerAutoComplete: function (key) {
+        var inputField, topic, chunk, currentText, match, topicMatch;
+
+        inputField = $('input[name=message]');
         //If backspace has been pressed, and we have some chunks, look into autodelete 
         if(key.keyCode === 8 && this.chunkSize > 0) {
-            var inputField = $('input[name=message]');
 
             //Only autodelete if we are right after the chunks
-            if (inputField.val().length === (this.chunkSize + 1)) {
+            if (inputField.val().length <= (this.chunkSize + 1)) {
                 inputField.val('');
                 this.chunkSize = 0;
 
                 //If we are at zero when this is done, switch to main window
-                var topic = this.model.topics.find(function(t) {
+                topic = this.model.topics.find(function(t) {
                     return t.get('name') === 'main';
                 });
 
@@ -440,18 +442,27 @@ var NodeChatView = Backbone.View.extend({
                 }
             }
         } 
+        else if(key.keyCode === 8 && inputField.val().length === 0) {
+            //If we are at zero when this is done, switch to main window
+            topic = this.model.topics.find(function(t) {
+                return t.get('name') === 'main';
+            });
+
+            if (topic) {
+                this.changeDisplayMode(topic);
+            }
+        }
         //If the tab key has been pressed, try and complete
         else if(key.keyCode == 9) {
             key.preventDefault();
 
-            var inputField = $('input[name=message]');
             if(inputField.length > 0) {
-                var currentText = inputField.val();
+                currentText = inputField.val();
 
                 //If we have a @ to handle
-                var chunk = mashlib.getChunksAtStartOfString(currentText, '@', false);
+                chunk = mashlib.getChunksAtStartOfString(currentText, '@', false);
                 if (chunk) {
-                    var match = this.model.users.find(function (u) {
+                    match = this.model.users.find(function (u) {
                         return (u.get('name').toLowerCase().indexOf(chunk) != -1);
                     });
 
@@ -459,7 +470,7 @@ var NodeChatView = Backbone.View.extend({
                         inputField.val('@' + match.get('name').toLowerCase() + ' ');
                         this.chunkSize = match.get('name').length + 1; //Set the chunksize so we can backspace out if we want
 
-                        var topicMatch = this.model.topics.find(function (t) {
+                        topicMatch = this.model.topics.find(function (t) {
                             return t.get('name') === '@' + match.get('name');
                         });
 
@@ -470,10 +481,10 @@ var NodeChatView = Backbone.View.extend({
                 }
                 else
                 {
-                    var chunk = mashlib.getChunksAtStartOfString(currentText, '#', false);
+                    chunk = mashlib.getChunksAtStartOfString(currentText, '#', false);
                     if (chunk) {
                         //Search subscribed topics
-                        var match = this.model.topics.find(function(t) {
+                        match = this.model.topics.find(function(t) {
                             return (t.get('name').toLowerCase().indexOf(chunk) != -1);
                         });
 
