@@ -115,6 +115,15 @@ var pulse = function (element, count) {
 
 var TopicView = Backbone.View.extend({
     className: 'topic'
+
+    , tagName: 'span'
+
+    , template: _.template('<%= name %>')
+
+    , events: {
+        'click' : 'clickHandler'
+    }
+
     , initialize: function (options) {
         _.bindAll(this, 'render', 'remove', 'addChat', 'removeChat', 'renderAllChats', 'hide');
         this.model.chats.bind('add', this.addChat);
@@ -126,9 +135,12 @@ var TopicView = Backbone.View.extend({
         this.visible = options.visible; //By default, don't render a topic
     }
 
+    , test: function () {
+        alert('blah');
+    }
+
     , render: function () {
-        log('[render] vis ' + this.visible);
-        $(this.el).html(this.model.get('name'));
+        $(this.el).html(this.template(this.model.toJSON()));
 
         if (this.visible) {
             $('.selected_topic').removeClass('selected_topic');
@@ -184,16 +196,25 @@ var TopicView = Backbone.View.extend({
         });
         this.trigger('topic:renderAllChats');
     }
+
+    , clickHandler: function() {
+        if (this.visible) {
+            this.trigger('topic:unsubscribe');
+        }
+        else {
+            this.trigger('topic:display');
+        }
+    }
 });
 
 var NodeChatView = Backbone.View.extend({
     initialize: function (options) {
         var main, that;
 
-        _.bindAll(this, 'addUser', 'removeUser', 'addTopic', 'removeTopic', 'triggerAutoComplete', 'suggestAutoComplete', 'sendMessages', 'changeDisplayMode');
+        _.bindAll(this, 'addUser', 'removeUser', 'addTopic', 
+            'addGlobalTopic', 'removeGlobalTopic', 'removeTopic', 'triggerAutoComplete', 'suggestAutoComplete', 'sendMessages', 'changeDisplayMode');
         this.model.topics.bind('add', this.addTopic);
         this.model.topics.bind('remove', this.removeTopic);
-        this.model.topics.bind('topic:message', this.topicReceivedMessage);
         this.model.globaltopics.bind('add', this.addGlobalTopic);
         this.model.globaltopics.bind('remove', this.removeGlobalTopic);
         this.model.users.bind('add', this.addUser);
@@ -207,7 +228,7 @@ var NodeChatView = Backbone.View.extend({
         //Always start with 'main' by default so we have something to display
         main = new models.TopicModel({name: 'main'});
         this.model.topics.add(main);
-        this.changeDisplayMode(main);
+        this.changeDisplayMode(main.get('name'));
 
         that = this;
         $('#message_box').focusin(function () { 
@@ -220,36 +241,56 @@ var NodeChatView = Backbone.View.extend({
         , 'keydown #message_form' : 'triggerAutoComplete'
         , 'keyup #message_form' : 'suggestAutoComplete'
     }
-    , changeDisplayMode: function (topic) {
-        if (this.currentDisplayTopic === topic && topic.view.visible) {
+
+    , topicUnsubscribe: function(topic) {
+        this.socket.send({
+            event: 'topic:unsubscribe'
+            , topic: topic.get('name')
+        });
+    }
+
+    , changeDisplayMode: function (topicName) {
+        var topic = this.model.topics.find(function(t) {
+            return topicName === t.get('name');
+        });
+
+        if (!topic || (this.currentDisplayTopic === topic && topic.view.visible)) {
             return;
         }
 
         //If already in progress, try again in a second
         if( $('#chat_box').is(":animated") ) {
-            setTimeout(this.changeDisplayMode(topic), 100);
+            setTimeout(this.changeDisplayMode(topicName), 100);
             return;
         }
 
         if (topic) {
-            boxTitle = topic.get('name') || 'undefined';
+            var that = this;
+            //Fade out, load the chats, then fade in
+            $('#chat_box').fadeOut(100, function () {
+
+                if (that.currentDisplayTopic) {
+                    that.currentDisplayTopic.view.hide();
+                }
+
+                that.currentDisplayTopic = topic ;
+
+                topic.view.renderAllChats(); //then render the new one. This will automatically set visible = true
+
+                //Need to handle this for globals
+                if (topic.chats.length === 0) {
+                    log('[changeDisplayMode] Empty topic, requesting history.')
+                    that.socket.send({
+                        event: 'topic:get'
+                        , topic: topic.get('name')
+                    });
+                }
+
+
+                $('#chat_box').fadeIn(100);
+                $('#chat_list')[0].scrollTop = $('#chat_list')[0].scrollHeight;
+            });
         }
-
-        var that = this;
-        //Fade out, load the chats, then fade in
-        $('#chat_box').fadeOut(100, function () {
-
-            if (that.currentDisplayTopic) {
-                that.currentDisplayTopic.view.hide();
-            }
-
-            that.currentDisplayTopic = topic ;
-
-            topic.view.renderAllChats(); //then render the new one. This will automatically set visible = true
-
-            $('#chat_box').fadeIn(100);
-            $('#chat_list')[0].scrollTop = $('#chat_list')[0].scrollHeight;
-        });
     }
     , clearAlerts: function (count) {
         this.newMessages = count;
@@ -294,16 +335,25 @@ var NodeChatView = Backbone.View.extend({
     , addTopic: function (topic) {
         var view, that;
 
-        var view = new TopicView({model: topic, visible: false});
+        view = new TopicView({model: topic, visible: false});
         $('#topic_list').append(view.render().el);
 
         that = this;
-        view.bind('topic:message', function(event) {
+        view.bind('topic:message', function() {
             that.setMsgAlert();
         });
 
+        view.bind('topic:display', function() {
+            that.changeDisplayMode(topic.get('name'));
+        });
+
+        view.bind('topic:unsubscribe', function() {
+            that.changeDisplayMode('main');
+            that.topicUnsubscribe(topic);
+        });
+
         if (this.currentDisplayTopic === topic) {
-            this.changeDisplayMode(topic);
+            this.changeDisplayMode(topic.get('name'));
         }
     }
 
@@ -312,11 +362,19 @@ var NodeChatView = Backbone.View.extend({
     }
 
     , addGlobalTopic: function (topic) {
-        var view, renderedView;
+        var view, renderedView, that;
 
         view = new TopicView({model: topic});
         renderedView = view.render().el;
         $('#global_topic_list').append(renderedView);
+
+        that = this;
+        view.bind('topic:display', function() {
+            if (topic) {
+                newTopic = new models.TopicModel({name: topic.get('name')});
+                that.model.topics.add(newTopic);
+            }
+        });
 
         if (!topic.get('reload')) {
             pulse(renderedView, 1);
@@ -390,7 +448,7 @@ var NodeChatView = Backbone.View.extend({
                 this.model.topics.add(topic);
             }
             else {
-                this.changeDisplayMode(topic);
+                this.changeDisplayMode(topic.get('name'));
             }
 
         }
@@ -416,7 +474,7 @@ var NodeChatView = Backbone.View.extend({
             });
 
             if (topic) {
-                this.changeDisplayMode(topic);
+                this.changeDisplayMode(topic.get('name'));
             }
         }
     }
@@ -438,7 +496,7 @@ var NodeChatView = Backbone.View.extend({
                 });
 
                 if (topic) {
-                    this.changeDisplayMode(topic);
+                    this.changeDisplayMode(topic.get('name'));
                 }
             }
         } 
@@ -449,7 +507,7 @@ var NodeChatView = Backbone.View.extend({
             });
 
             if (topic) {
-                this.changeDisplayMode(topic);
+                this.changeDisplayMode(topic.get('name'));
             }
         }
         //If the tab key has been pressed, try and complete
@@ -475,7 +533,7 @@ var NodeChatView = Backbone.View.extend({
                         });
 
                         if (topicMatch) {
-                            this.changeDisplayMode(topicMatch);
+                            this.changeDisplayMode(topicMatch.get('name'));
                         }
                     }
                 }
@@ -493,12 +551,18 @@ var NodeChatView = Backbone.View.extend({
                             match = this.model.globaltopics.find(function(t) {
                                 return (t.get('name').toLowerCase().indexOf(chunk) != -1);
                             });
+    
+                            //If we find a global, add it to the sub list
+                            if (match) {
+                                match = new models.TopicModel({name: match.get('name')});
+                                this.model.topics.add(match);
+                            }
                         }
 
                         if(match) {
                             inputField.val('#' + match.get('name') + ' ');
                             this.chunkSize = match.get('name').length + 1; //Set the chunksize so we can backspace out if we want
-                            this.changeDisplayMode(match);
+                            this.changeDisplayMode(match.get('name'));
                         }
                     }
                 }

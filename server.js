@@ -3,7 +3,7 @@
 // MIT Licensed
 
 // Global settings
-var version = '0.3.9';
+var version = '0.3.10';
 var dev_port = 8000;
 var server_port = 80;
 var config_file = '/home/node/nodechat_config';
@@ -219,10 +219,6 @@ socket.on('connection', function (client) {
                 clientPurgatory.tryToGetOut(message, client, function () {
                     channelmanager.setupClientForSubscriptions(client, function () {
                         winston.info('Client ' + client.sessionId + ' setup for pub/sub');
-
-                        channelmanager.subscribeClientToChannel(client, 'main', function (){
-                            winston.info('Client ' + client.sessionId + ' subcribed to main topic');
-                        });
 
                         usermanager.newUserConnection(client, function() {
                             winston.info('Client ' + client.sessionId + ' connection setup.');

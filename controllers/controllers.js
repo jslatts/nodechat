@@ -129,6 +129,7 @@ NodeChatController = {
                 //If it doesn't exist, create it and add it to the global list
                 if (!topic) {
                     topic = new models.TopicModel({'name': message.data});
+                    topic.set({'global': true});
 
                     if (message.reload) {
                         topic.set({'reload': true});
