@@ -370,9 +370,14 @@ var NodeChatView = Backbone.View.extend({
 
         that = this;
         view.bind('topic:display', function() {
-            if (topic) {
+            var existingTopic = that.model.topics.find(function (t) {
+                return t.get('name') === topic.get('name');
+            });
+
+            if (!existingTopic) {
                 newTopic = new models.TopicModel({name: topic.get('name')});
                 that.model.topics.add(newTopic);
+                that.changeDisplayMode(newTopic.get('name'));
             }
         });
 
