@@ -1,90 +1,101 @@
+html 
+  height 100%
+
 body 
   font 12px/1.3 "Lucida Grande", Arial, sans-serif
+  margin 0
+  padding 0
+  height 100%
     
 h1
   margin-top 0px
-  float left
-
-#version
-  margin-top 20px
-  margin-left 4px
-  font-size 7px
-  float left
-
-#content
-  width 100%
-  float left
-  clear left
-
-.topic
-  float left
-  padding 2px 5px 2px 5px
-  border solid 1px gray
-  margin-right 10px
-  margin-bottom 3px
-  border-radius 4px
-
-#user_list
-.user_model
-  float left
-
-.user_model
-  margin-left 5px
-
-#logon_name
-#topic_list
-#status_box
-  float left
-  clear left
-
-.selected_topic
-  background #ebebec
-  border solid 1px gray
-
-#box_title
-  font-weight bold
-  margin-bottom 2px
-
-#chat_box
-#message_box
-#box_title
-  float left
-  clear left
-  width 100%
-  
-#chat_list
-  height 400px
-  overflow-y scroll
-  border solid gray 1px
-  width 100%
-
-
-#message_field
-  width 99%
-  border solid gray 1px
-
-#message_send_button
-  display none
-
-#global_topic_box
-  float left
-  width 70%
-
-#global_topic_list
-  float left
-
-#topic_list
-  float left
-
-#disconnectMessage 
-  margin-top 5px
-  color red
-  display none
-
-#help
-  float right
 
 form input
   padding 5px
   border 1px 
 
+//2 column layout
+header-height = 0px
+column-width = 200px
+footer-height = 29px
+
+#wrap
+  min-height 100%
+  height 100%
+  margin auto
+  position relative
+
+#version
+  margin-left 4px
+  font-size 7px
+
+#title 
+  position absolute
+  top 0
+  right 0
+  margin-right column-width + 30px
+  font-size 125px
+  z-index 1
+  opacity .15
+
+#inner-wrap
+  padding-bottom footer-height
+  padding-top header-height
+
+#inner-wrap:after
+  content " "
+  display block
+  clear both
+
+#user_list 
+  position absolute
+  top 0
+  right 0
+  margin-top header-height
+  width column-width
+  background-color #1c486e
+  color white
+  text-align left
+  padding-top 5px
+
+#chat_list
+  padding 5px
+  background linear-gradient(top, #ffffff, #a6d2ff)
+  background -moz-linear-gradient(top, #ffffff, #a6d2ff)
+  background -webkit-gradient(linear, center top, center bottom, from(#ffffff), to(#a6d2ff))
+  background -o-linear-gradient(top, #ffffff, #a6d2ff)
+  background linear-gradient(top, #ffffff, #a6d2ff)
+  position absolute
+  top 0
+  bottom 0
+  right 0
+  left 0
+  margin-right column-width
+  margin-bottom footer-height
+  margin-top header-height
+  overflow-y scroll
+
+#footer
+  position absolute
+  bottom 0
+  height footer-height
+  right 0
+  margin-right column-width
+  background #dbdbdb
+  border solid 1px gray
+  padding-right 2px
+
+#message_field
+  width 100%
+  padding 0px
+  overflow-x hide
+  background #dbdbdb
+  height footer-height - 2px
+
+#message_send_button
+  display none
+
+#disconnectMessage 
+  margin-top 5px
+  color red
+  display none

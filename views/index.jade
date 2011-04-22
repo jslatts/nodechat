@@ -29,46 +29,101 @@ html(lang='en')
         
       });
   body
-    #content
-      #help
-        p @user to send direct messages
+    #wrap
+      #header
+      #inner-wrap
+
+        #title
+          | nodechat.js
+          div#version v!{locals.version}
+            | &nbsp; disconnected - trying to reconnect...
+
+        #user_list
+          |  jslatts
           br
-          | #topic to join or start topic
+          |  brice
           br
-          | -topic to unsubscribe from a topic
-          br
-          | click a topic name to join it. Click again to leave.
-          a(href='/logout') logout
-      h1 nodechat 
-      div#version v!{locals.version}
+          |  hey
 
-      #disconnectMessage 
-        | disconnected - trying to reconnect...
-
-      #status_box
-        span#user_count 0
-        | users online: 
-      #user_list
-
-      p#logon_name
-        label You are connected as: 
-          = locals.name
-
-      #topic_list 
-
-      #chat_box
         #chat_list
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
+          | blah lasdfjlaskdfjasl kdfj a
+          br
 
-      #message_box
-        form(method='post', action='#', onsubmit='return false')#message_form
-          p
+        #footer
+          form(method='post', action='#', onsubmit='return false')#message_form
             input(type='text', name='message', size='240')#message_field
             input(type='submit', value='send')#message_send_button
-
-      #global_topic_box
-        p(style='margin-top:0px')
-          | Topics 
-        #global_topic_list
-        br
-
-

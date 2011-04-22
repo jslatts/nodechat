@@ -16,39 +16,23 @@
     
     models.ChatEntry = Backbone.Model.extend({});
 
-    models.TopicModel = Backbone.Model.extend({
-        initialize: function () {
-            this.chats = new models.ChatCollection(); 
-            this.chats.comparator = datetimeComparator;
-        }
-    });
-    
     models.UserModel = Backbone.Model.extend({
         idAttribute: "name"
     });
 
     models.NodeChatModel = Backbone.Model.extend({
         initialize: function() {
-            this.topics = new models.TopicCollection(); 
-            this.topics.comparator = nameComparator;
-
-            this.globaltopics = new models.TopicCollection(); 
-            this.globaltopics.comparator = nameComparator;
+            this.chats = new models.ChatCollection(); 
+            this.chats.comparator = datetimeComparator;
 
             this.users = new models.UserCollection();
             this.users.comparator = nameComparator;
         }
     });
-    
 
     //
     //Collections
     //
-    //
-    models.TopicCollection = Backbone.Collection.extend({
-        model: models.TopicModel
-    });
-
     models.ChatCollection = Backbone.Collection.extend({
         model: models.ChatEntry
     });

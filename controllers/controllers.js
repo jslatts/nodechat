@@ -92,56 +92,7 @@ NodeChatController = {
                     newChatEntry.set({'reload': true});
                 }
 
-                //Find the correct topic
-                var topic = this.model.topics.find(function(t) {
-                    return t.get('name') == newChatEntry.get('topic');
-                });
-
-                //If it doesn't exist, create it and add it to the current list
-                if (!topic) {
-                    topic = new models.TopicModel({name: newChatEntry.get('topic')});
-                    this.model.topics.add(topic);
-                }
-
-                topic.chats.add(newChatEntry);
-                break;
-
-            case 'topic:unsubscribe':
-                log('here' + message.data);
-                //Find the correct topic
-                var topic = this.model.topics.find(function(t) {
-                    return t.get('name') == message.topic;
-                });
-
-                //If it doesn't exist, create it and add it to the current list
-                if (topic) {
-                    this.model.topics.remove(topic);
-                }
-
-                break;
-
-            case 'globaltopic':
-                //Find the correct topic
-                var topic = this.model.globaltopics.find(function(t) {
-                    return t.get('name') == message.data;
-                });
-
-                //If it doesn't exist, create it and add it to the global list
-                if (!topic) {
-                    topic = new models.TopicModel({'name': message.data});
-                    topic.set({'global': true});
-
-                    if (message.reload) {
-                        topic.set({'reload': true});
-                    }
-
-                    this.model.globaltopics.add(topic);
-                }
-
-                break;
-
-            case 'globaltopic:message':
-                //Check if we are reloading/connecting and flag accodingly
+                this.model.chats.add(newChatEntry);
                 break;
 
             case 'user:join':

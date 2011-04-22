@@ -1,89 +1,97 @@
+html {
+  height: 100%;
+}
 body {
   font: 12px / 1.3 "Lucida Grande", Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  height: 100%;
 }
 h1 {
   margin-top: 0px;
-  float: left;
+}
+form input {
+  padding: 5px;
+  border: 1px;
+}
+#wrap {
+  min-height: 100%;
+  height: 100%;
+  margin: auto;
+  position: relative;
 }
 #version {
-  margin-top: 20px;
   margin-left: 4px;
   font-size: 7px;
-  float: left;
 }
-#content {
-  width: 100%;
-  float: left;
-  clear: left;
+#title {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin-right: 230px;
+  font-size: 125px;
+  z-index: 1;
+  opacity: 0.15;
 }
-.topic {
-  float: left;
-  padding: 2px 5px 2px 5px;
-  border: solid 1px #808080;
-  margin-right: 10px;
-  margin-bottom: 3px;
-  border-radius: 4px;
+#inner-wrap {
+  padding-bottom: 29px;
+  padding-top: 0px;
 }
-#user_list,
-.user_model {
-  float: left;
+#inner-wrap:after {
+  content: " ";
+  display: block;
+  clear: both;
 }
-.user_model {
-  margin-left: 5px;
-}
-#logon_name,
-#topic_list,
-#status_box {
-  float: left;
-  clear: left;
-}
-.selected_topic {
-  background: #ebebec;
-  border: solid 1px #808080;
-}
-#box_title {
-  font-weight: bold;
-  margin-bottom: 2px;
-}
-#chat_box,
-#message_box,
-#box_title {
-  float: left;
-  clear: left;
-  width: 100%;
+#user_list {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin-top: 0px;
+  width: 200px;
+  background-color: #1c486e;
+  color: #fff;
+  text-align: left;
+  padding-top: 5px;
 }
 #chat_list {
-  height: 400px;
+  padding: 5px;
+  background: linear-gradient(top, #fff, #a6d2ff);
+  background: -moz-linear-gradient(top, #fff, #a6d2ff);
+  background: -webkit-gradient(linear, center top, center bottom, from(#fff), to(#a6d2ff));
+  background: -o-linear-gradient(top, #fff, #a6d2ff);
+  background: linear-gradient(top, #fff, #a6d2ff);
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  margin-right: 200px;
+  margin-bottom: 29px;
+  margin-top: 0px;
   overflow-y: scroll;
-  border: solid #808080 1px;
-  width: 100%;
+}
+#footer {
+  position: absolute;
+  bottom: 0;
+  height: 29px;
+  right: 0;
+  margin-right: 200px;
+  background: #dbdbdb;
+  border: solid 1px #808080;
+  padding-right: 2px;
 }
 #message_field {
-  width: 99%;
-  border: solid #808080 1px;
+  width: 100%;
+  padding: 0px;
+  overflow-x: hide;
+  background: #dbdbdb;
+  height: 27px;
 }
 #message_send_button {
   display: none;
-}
-#global_topic_box {
-  float: left;
-  width: 70%;
-}
-#global_topic_list {
-  float: left;
-}
-#topic_list {
-  float: left;
 }
 #disconnectMessage {
   margin-top: 5px;
   color: #f00;
   display: none;
-}
-#help {
-  float: right;
-}
-form input {
-  padding: 5px;
-  border: 1px;
 }
