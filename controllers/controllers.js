@@ -83,7 +83,7 @@ NodeChatController = {
     , msgReceived: function (message) {
         switch (message.event) {
             case 'chat':
-                log('message received: ' + message.data );
+                //log('message received: ' + message.data );
                 var newChatEntry = new models.ChatEntry();
                 newChatEntry.mport(message.data);
 

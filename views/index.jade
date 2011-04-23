@@ -23,10 +23,7 @@ html(lang='en')
 
       $(document).ready(function () { 
         window.app = NodeChatController.init({port: !{locals.port}, hashpassword: !{locals.hashpassword}, userName: '!{locals.name}', version: '!{locals.version}' }); 
-        $('input:text:first:visible').focus(function() {
-            window.app.view.clearAlerts(0);
-        });  
-        
+        $('input[name=message]').focus();  
       });
   body
     #wrap
@@ -38,92 +35,12 @@ html(lang='en')
           div#version v!{locals.version}
             | &nbsp; disconnected - trying to reconnect...
 
-        #user_list
-          |  jslatts
-          br
-          |  brice
-          br
-          |  hey
+        #right
+          #user_list
 
         #chat_list
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
-          | blah lasdfjlaskdfjasl kdfj a
-          br
 
         #footer
-          form(method='post', action='#', onsubmit='return false')#message_form
+          form(method='post', action='', onsubmit='return false')#message_form
             input(type='text', name='message', size='240')#message_field
             input(type='submit', value='send')#message_send_button

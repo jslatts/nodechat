@@ -114,10 +114,16 @@ var pulse = function (element, count) {
 }
 
 var NodeChatView = Backbone.View.extend({
-    initialize: function (options) {
+    events: {
+        'submit #message_form': 'sendMessage'
+        , 'keydown #message_field': 'triggerAutoComplete'
+        , 'keyup #message_field': 'suggestAutoComplete'
+    }
+
+    , initialize: function (options) {
         var main, that;
 
-        _.bindAll(this, 'addUser', 'removeUser', 'addChat', 'removeChat', 'triggerAutoComplete', 'suggestAutoComplete', 'sendMessages');
+        _.bindAll(this, 'addUser', 'removeUser', 'addChat', 'removeChat', 'triggerAutoComplete', 'suggestAutoComplete', 'sendMessage');
         this.model.users.bind('add', this.addUser);
         this.model.users.bind('remove', this.removeUser);
         this.model.chats.bind('add', this.addChat);
@@ -127,16 +133,11 @@ var NodeChatView = Backbone.View.extend({
         this.userName = options.userName;
         this.chunkSize = 0;
 
+        $('#message_form').submit( this.sendMessage );
         that = this;
-        $('#message_box').focusin(function () { 
+        $('input#message_field').focusin(function () { 
             that.clearAlerts(0); 
         }); //Clear the alerts when the box gets focus
-    }
-
-    , events: {
-        'submit #message_form' : 'sendMessage'
-        , 'keydown #message_form' : 'triggerAutoComplete'
-        , 'keyup #message_form' : 'suggestAutoComplete'
     }
 
     , clearAlerts: function (count) {
@@ -221,8 +222,9 @@ var NodeChatView = Backbone.View.extend({
 
         inputField = $('input[name=message]');
 
-        if (inputField.val().length > 400)
+        if (inputField.val().length > 400) {
             return;
+        }
 
         this.socket.send({
             event: 'chat'
