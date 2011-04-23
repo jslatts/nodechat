@@ -133,11 +133,14 @@ var NodeChatView = Backbone.View.extend({
         this.userName = options.userName;
         this.chunkSize = 0;
 
-        $('#message_form').submit( this.sendMessage );
         that = this;
         $('input#message_field').focusin(function () { 
             that.clearAlerts(0); 
         }); //Clear the alerts when the box gets focus
+    }
+
+    , render: function() {
+        log('rendered main view');
     }
 
     , clearAlerts: function (count) {

@@ -34,7 +34,7 @@ NodeChatController = {
 
 
         this.model = new models.NodeChatModel();
-        this.view = new NodeChatView({model: this.model, socket: this.socket, el: $('#content'), userName: options.userName});
+        this.view = new NodeChatView({model: this.model, socket: this.socket, el: $('#wrap'), userName: options.userName});
         view = this.view;
         connected = false;
 

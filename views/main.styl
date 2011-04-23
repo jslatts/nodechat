@@ -18,6 +18,8 @@ form input
 header-height = 0px
 column-width = 200px
 footer-height = 29px
+background-lower-color = #e8f3ff
+background-upper-color = #ffffff
 
 #wrap
   min-height 100%
@@ -25,18 +27,6 @@ footer-height = 29px
   margin auto
   position relative
 
-#version
-  margin-left 4px
-  font-size 7px
-
-#title 
-  position absolute
-  top 0
-  right 0
-  margin-right column-width + 30px
-  font-size 125px
-  z-index 1
-  opacity .15
 
 #inner-wrap
   padding-bottom footer-height
@@ -63,11 +53,11 @@ footer-height = 29px
 
 #chat_list
   padding 5px
-  background linear-gradient(top, #ffffff, #a6d2ff)
-  background -moz-linear-gradient(top, #ffffff, #a6d2ff)
-  background -webkit-gradient(linear, center top, center bottom, from(#ffffff), to(#a6d2ff))
-  background -o-linear-gradient(top, #ffffff, #a6d2ff)
-  background linear-gradient(top, #ffffff, #a6d2ff)
+  background linear-gradient(top, background-upper-color, background-lower-color)
+  background -moz-linear-gradient(top, background-upper-color, background-lower-color)
+  background -webkit-gradient(linear, center top, center bottom, from(background-upper-color), to(background-lower-color))
+  background -o-linear-gradient(top, background-upper-color, background-lower-color)
+  background linear-gradient(top, background-upper-color, background-lower-color)
   position absolute
   top 0
   bottom 0
@@ -98,7 +88,27 @@ footer-height = 29px
 #message_send_button
   display none
 
+#version
+  font-size 7px
+  margin-top 135px
+  margin-right column-width + 45
+
+#title
 #disconnectMessage 
-  margin-top 5px
+  text-align right
+  font-size 125px
+  margin-right column-width + 30px
+
+#title 
+#version
+#disconnectMessage 
+  position absolute
+  top 0
+  right 0
+  z-index 1
+  opacity .15
+
+#disconnectMessage 
+  margin-top 150px
   color red
   display none

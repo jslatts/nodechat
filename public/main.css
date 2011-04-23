@@ -20,19 +20,6 @@ form input {
   margin: auto;
   position: relative;
 }
-#version {
-  margin-left: 4px;
-  font-size: 7px;
-}
-#title {
-  position: absolute;
-  top: 0;
-  right: 0;
-  margin-right: 230px;
-  font-size: 125px;
-  z-index: 1;
-  opacity: 0.15;
-}
 #inner-wrap {
   padding-bottom: 29px;
   padding-top: 0px;
@@ -58,11 +45,11 @@ form input {
 }
 #chat_list {
   padding: 5px;
-  background: linear-gradient(top, #fff, #a6d2ff);
-  background: -moz-linear-gradient(top, #fff, #a6d2ff);
-  background: -webkit-gradient(linear, center top, center bottom, from(#fff), to(#a6d2ff));
-  background: -o-linear-gradient(top, #fff, #a6d2ff);
-  background: linear-gradient(top, #fff, #a6d2ff);
+  background: linear-gradient(top, #fff, #e8f3ff);
+  background: -moz-linear-gradient(top, #fff, #e8f3ff);
+  background: -webkit-gradient(linear, center top, center bottom, from(#fff), to(#e8f3ff));
+  background: -o-linear-gradient(top, #fff, #e8f3ff);
+  background: linear-gradient(top, #fff, #e8f3ff);
   position: absolute;
   top: 0;
   bottom: 0;
@@ -93,8 +80,28 @@ form input {
 #message_send_button {
   display: none;
 }
+#version {
+  font-size: 7px;
+  margin-top: 135px;
+  margin-right: 245px;
+}
+#title,
 #disconnectMessage {
-  margin-top: 5px;
+  text-align: right;
+  font-size: 125px;
+  margin-right: 230px;
+}
+#title,
+#version,
+#disconnectMessage {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  opacity: 0.15;
+}
+#disconnectMessage {
+  margin-top: 150px;
   color: #f00;
   display: none;
 }
