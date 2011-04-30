@@ -3,7 +3,7 @@
 // MIT Licensed
 
 // Global settings
-var version = '0.3.15';
+var version = '0.3.16';
 var dev_port = 8000;
 var server_port = 80;
 var config_file = '/home/node/nodechat_config';
