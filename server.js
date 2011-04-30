@@ -115,8 +115,7 @@ function signInAccount(req, res) {
             });
         } 
         else {
-            req.session.error = 'Authentication failed, please check your username and password.';
-            res.redirect('back');
+            res.render('login', { locals: { error: 'Authentication failed, please check your username and password.'}});
         }
     });
 }
@@ -127,8 +126,7 @@ function signInAccount(req, res) {
 app.post('/signup', function (req, res) {
     auth.createNewUserAccount(req.body.username, req.body.password, req.body.email, function (err, user) {
         if ((err) || (!user)) {
-            req.session.error = 'New user failed, please check your username and password.';
-            res.redirect('back');
+            res.render('login', { locals: { error: 'Username is already in use or is invalid. Please try another.' }});
         }
         else if (user) {
             signInAccount(req, res);

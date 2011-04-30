@@ -17,6 +17,7 @@ html(lang="en")
             input(type='password', name='password')
           br
           input(type='submit', value='login')
+          br
       p
         | or create an account 
       form(method="post", action="/signup")
@@ -31,3 +32,5 @@ html(lang="en")
             input(type='text', name='email')
           br
           input(type='submit', value='signup & login')
+      p
+        #error(style='color: red') #{locals.error}
