@@ -30,7 +30,7 @@ NodeChatController = {
         log('user is ' + options.userName);
 
         //Records the client version to support auto-updates
-        versio = this.version = options.version;
+        version = this.version = options.version;
 
 
         this.model = new models.NodeChatModel();

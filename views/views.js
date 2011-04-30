@@ -123,10 +123,11 @@ var NodeChatView = Backbone.View.extend({
     , initialize: function (options) {
         var main, that;
 
-        _.bindAll(this, 'addUser', 'removeUser', 'addChat', 'removeChat', 'triggerAutoComplete', 'suggestAutoComplete', 'sendMessage');
+        _.bindAll(this, 'addUser', 'removeUser', 'addChat', 'removeChat', 'triggerAutoComplete', 'suggestAutoComplete', 'sendMessage', 'setMsgAlert');
         this.model.users.bind('add', this.addUser);
         this.model.users.bind('remove', this.removeUser);
         this.model.chats.bind('add', this.addChat);
+        this.model.chats.bind('add', this.setMsgAlert);
         this.model.chats.bind('remove', this.removeChat);
         this.newMessages = 0;
         this.socket = options.socket;
