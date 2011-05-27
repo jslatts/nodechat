@@ -56,7 +56,9 @@ var ChatView = Backbone.View.extend({
     , render: function () {
         var text = replaceURLWithHTMLLinks(this.model.get('text'));
         text = replaceURLWithMarkDown(text);
-        $(this.el).html(this.model.get('niceTime') + ' - ' + this.model.get('user') + ': ' + text);
+        var fullText = this.model.get('niceTime') + ' - ' + this.model.get('user') + ': ' + text;
+        fullText = fullText.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        $(this.el).html(fullText);
         return this;
     }
     , remove: function () {
@@ -75,6 +77,7 @@ var StatusView = Backbone.View.extend({
         var text, message, time;
 
         text = this.userName;
+        text = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
         message = this.statusMessage;
         time = this.niceTime;
         $(this.el).html(time + ' - <em>' + text + ' ' + message + '</em>');
@@ -91,7 +94,9 @@ var UserView = Backbone.View.extend({
         this.model.view = this;
     }
     , render: function () {
-        $(this.el).html(this.model.get('name'));
+        var uName = this.model.get('name');
+        uName = uName.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        $(this.el).html(uName);
         return this;
     }
     , remove: function () {
