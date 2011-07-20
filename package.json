@@ -1,0 +1,18 @@
+{
+    "name": "nodechat"
+  , "version": "0.1.0"
+  , "private": true
+  , "dependencies": {
+      "underscore": ">= 1.1.7"
+     ,"winston": ">= 0"
+     ,"joose": ">= 0"
+     ,"joosex-namespace-depended": ">= 0"
+     ,"backbone": ">= 0"
+     ,"hash": ">= 0"
+     ,"redis": ">= 0"
+     ,"connect": ">= 0"
+     ,"connect-redis": ">= 0"
+     ,"jade": ">= 0"
+     ,"stylus": ">= 0"
+  }
+}
