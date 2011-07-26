@@ -4,6 +4,13 @@ Visit http://nodechat.no.de/ to see this code in action. You can even ask node.j
 
 Here is the roadmap. Any suggestions or bug fixes are welcome.
 
+LCOAL USAGE:
+
+    npm install
+    node server.js
+
+Open multiple browsers at http://localhost:8000
+
 TODO:
 
  - Total History
