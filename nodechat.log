@@ -1,75 +1,53 @@
-23 Jul 20:37:00 - info: Attempting to use config at /home/node/nodechat_config
-23 Jul 20:37:00 - info: no config found. starting in local dev mode
-23 Jul 20:37:00 - info: [main] nodechat v0.3.18 listening on port 8000
-23 Jul 20:37:00 - info: Unlinked ./public/main.css
-23 Jul 20:37:01 - info: GET main.css complete
-23 Jul 20:38:00 - info: GET /login
-23 Jul 20:38:14 - info: sending back {"name":"drnic","email":"","hashPass":"8800080e89e32f8cd540faab7412568a9bf5b63ef7dfd0beee36ef6b5f5dc8b4abecb7572003471bdb85b2475a12d4ae6916edce69481eb8b93ff03377e76438"}
-23 Jul 20:38:14 - info: [authenticate] Starting auth for drnic with password drnic
-23 Jul 20:38:14 - info: [authenticateUser] user: drnic found in store. Verifying password.
-23 Jul 20:38:14 - info: [verifyUserAccount] Auth succeeded for drnic with password drnic
-23 Jul 20:38:14 - info: [verifyUserAccount] profile returned {"name":"drnic","email":""}
-23 Jul 20:38:14 - info: sending back f{"name":"drnic","email":"","hashPass":"8800080e89e32f8cd540faab7412568a9bf5b63ef7dfd0beee36ef6b5f5dc8b4abecb7572003471bdb85b2475a12d4ae6916edce69481eb8b93ff03377e76438"}
-23 Jul 20:38:14 - info: regenerated session id ZZv8EAX9uWEx8lvapiNqEmOS.ee0I7O13HydxLWkIaFDSqFIyDRHrondHJsb3359d3O8
-23 Jul 20:38:14 - info: Storing new hash for user drnic: 8800080e89e32f8cd540faab7412568a9bf5b63ef7dfd0beee36ef6b5f5dc8b4abecb7572003471bdb85b2475a12d4ae6916edce69481eb8b93ff03377e76438
-23 Jul 20:38:15 - info: [purgatory] status true
-23 Jul 20:38:15 - info: [authenticateUserByHash] Starting hash auth for drnic with hash 8800080e89e32f8cd540faab7412568a9bf5b63ef7dfd0beee36ef6b5f5dc8b4abecb7572003471bdb85b2475a12d4ae6916edce69481eb8b93ff03377e76438
-23 Jul 20:38:15 - info: [authenticateUserByHash] user: drnic found in store. Verifying password.
-23 Jul 20:38:15 - info: [authenticateUserByHash] user: drnic hash verified. Authenticated.
-23 Jul 20:38:15 - info: [purgatory] out of purgatory
-23 Jul 20:38:15 - info: Client 6623055043164641 setup for pub/sub
-23 Jul 20:38:15 - info: Client 6623055043164641 subcribed to main topic
-23 Jul 20:38:15 - info: Client 6623055043164641 connection setup.
-23 Jul 20:38:17 - info: [purgatory] status false
-23 Jul 20:38:17 - info: [handleMessage] routing message: {"event":"chat","data":"asdf"}
-23 Jul 20:38:17 - info: [parseControlWordsFromChat] main topic
-23 Jul 20:38:17 - info: [handleChat][createChat][fn] publishing to chat to topic main, {"id":1,"cid":"c1","attrs":{"id":1,"topic":"main","text":"asdf","user":"drnic","niceTime":"08:38:17 PM","time":1311478697369}}
-23 Jul 20:38:17 - info: [handleChat][createChat][fn] saving to chat to topic main, {"id":1,"cid":"c1","attrs":{"id":1,"topic":"main","text":"asdf","user":"drnic","niceTime":"08:38:17 PM","time":1311478697369}}
-23 Jul 20:38:17 - info: [purgatory] status false
-23 Jul 20:38:17 - info: [handleMessage] routing message: {"event":"chat","data":"sfgd"}
-23 Jul 20:38:17 - info: [parseControlWordsFromChat] main topic
-23 Jul 20:38:17 - info: [handleChat][createChat][fn] publishing to chat to topic main, {"id":2,"cid":"c2","attrs":{"id":2,"topic":"main","text":"sfgd","user":"drnic","niceTime":"08:38:17 PM","time":1311478697904}}
-23 Jul 20:38:17 - info: [handleChat][createChat][fn] saving to chat to topic main, {"id":2,"cid":"c2","attrs":{"id":2,"topic":"main","text":"sfgd","user":"drnic","niceTime":"08:38:17 PM","time":1311478697904}}
-23 Jul 20:38:26 - info: [purgatory] status true
-23 Jul 20:38:26 - info: [authenticateUserByHash] Starting hash auth for drnic with hash 8800080e89e32f8cd540faab7412568a9bf5b63ef7dfd0beee36ef6b5f5dc8b4abecb7572003471bdb85b2475a12d4ae6916edce69481eb8b93ff03377e76438
-23 Jul 20:38:26 - info: [authenticateUserByHash] user: drnic found in store. Verifying password.
-23 Jul 20:38:26 - info: [authenticateUserByHash] user: drnic hash verified. Authenticated.
-23 Jul 20:38:26 - info: [purgatory] out of purgatory
-23 Jul 20:38:26 - info: Client 4554101435933262 setup for pub/sub
-23 Jul 20:38:26 - info: Client 4554101435933262 subcribed to main topic
-23 Jul 20:38:26 - info: [connectedusers]drnic
-23 Jul 20:38:26 - info: Client 4554101435933262 connection setup.
-23 Jul 20:38:28 - info: [clientDisconnect] disconnecting client: 4554101435933262
-23 Jul 20:38:32 - info: GET /login
-23 Jul 20:38:37 - info: sending back {"name":"drnic2","email":"","hashPass":"19590f551ff6a45965b4c533737bc900fb50c4e1079874ec58495d84ae23b61c53e5b8fdd9544053de8f786218b726302a343fdd6263969a025edbe7cd5f1920"}
-23 Jul 20:38:37 - info: [authenticate] Starting auth for drnic2 with password drnic2
-23 Jul 20:38:37 - info: [authenticateUser] user: drnic2 found in store. Verifying password.
-23 Jul 20:38:37 - info: [verifyUserAccount] Auth succeeded for drnic2 with password drnic2
-23 Jul 20:38:37 - info: [verifyUserAccount] profile returned {"name":"drnic2","email":""}
-23 Jul 20:38:37 - info: sending back f{"name":"drnic2","email":"","hashPass":"19590f551ff6a45965b4c533737bc900fb50c4e1079874ec58495d84ae23b61c53e5b8fdd9544053de8f786218b726302a343fdd6263969a025edbe7cd5f1920"}
-23 Jul 20:38:37 - info: regenerated session id INalWtUT8KRfi2YTr8uPenTk.px4HzRmFIah28PRbc8+3PDm2oYJ1HnU8yvD78YsBN9A
-23 Jul 20:38:37 - info: Storing new hash for user drnic2: 19590f551ff6a45965b4c533737bc900fb50c4e1079874ec58495d84ae23b61c53e5b8fdd9544053de8f786218b726302a343fdd6263969a025edbe7cd5f1920
-23 Jul 20:38:38 - info: [purgatory] status true
-23 Jul 20:38:38 - info: [authenticateUserByHash] Starting hash auth for drnic2 with hash 19590f551ff6a45965b4c533737bc900fb50c4e1079874ec58495d84ae23b61c53e5b8fdd9544053de8f786218b726302a343fdd6263969a025edbe7cd5f1920
-23 Jul 20:38:38 - info: [authenticateUserByHash] user: drnic2 found in store. Verifying password.
-23 Jul 20:38:38 - info: [authenticateUserByHash] user: drnic2 hash verified. Authenticated.
-23 Jul 20:38:38 - info: [purgatory] out of purgatory
-23 Jul 20:38:38 - info: Client 26540200249291956 setup for pub/sub
-23 Jul 20:38:38 - info: Client 26540200249291956 subcribed to main topic
-23 Jul 20:38:38 - info: [connectedusers]drnic
-23 Jul 20:38:38 - info: Client 26540200249291956 connection setup.
-23 Jul 20:38:41 - info: [purgatory] status false
-23 Jul 20:38:41 - info: [handleMessage] routing message: {"event":"chat","data":"sadf"}
-23 Jul 20:38:41 - info: [parseControlWordsFromChat] main topic
-23 Jul 20:38:41 - info: [handleChat][createChat][fn] publishing to chat to topic main, {"id":3,"cid":"c6","attrs":{"id":3,"topic":"main","text":"sadf","user":"drnic2","niceTime":"08:38:41 PM","time":1311478721925}}
-23 Jul 20:38:41 - info: [handleChat][createChat][fn] saving to chat to topic main, {"id":3,"cid":"c6","attrs":{"id":3,"topic":"main","text":"sadf","user":"drnic2","niceTime":"08:38:41 PM","time":1311478721925}}
-23 Jul 20:38:42 - info: [purgatory] status false
-23 Jul 20:38:42 - info: [handleMessage] routing message: {"event":"chat","data":"sgdfsdg"}
-23 Jul 20:38:42 - info: [parseControlWordsFromChat] main topic
-23 Jul 20:38:42 - info: [handleChat][createChat][fn] publishing to chat to topic main, {"id":4,"cid":"c7","attrs":{"id":4,"topic":"main","text":"sgdfsdg","user":"drnic2","niceTime":"08:38:42 PM","time":1311478722647}}
-23 Jul 20:38:42 - info: [handleChat][createChat][fn] saving to chat to topic main, {"id":4,"cid":"c7","attrs":{"id":4,"topic":"main","text":"sgdfsdg","user":"drnic2","niceTime":"08:38:42 PM","time":1311478722647}}
-23 Jul 20:38:43 - info: [purgatory] status false
-23 Jul 20:38:43 - info: [handleMessage] routing message: {"event":"chat","data":"dfsgasdf"}
-23 Jul 20:38:43 - info: [parseControlWordsFromChat] main topic
-23 Jul 20:38:43 - info: [handleChat][createChat][fn] publishing to chat to topic main, {"id":5,"cid":"c8","attrs":{"id":5,"topic":"main","text":"dfsgasdf","user":"drnic2","niceTime":"08:38:43 PM","time":1311478723433}}
-23 Jul 20:38:43 - info: [handleChat][createChat][fn] saving to chat to topic main, {"id":5,"cid":"c8","attrs":{"id":5,"topic":"main","text":"dfsgasdf","user":"drnic2","niceTime":"08:38:43 PM","time":1311478723433}}
+
+info: Attempting to use config at /home/node/nodechat_config
+info: no config found. starting in local dev mode
+info: [main] nodechat v0.3.19 listening on port 8000
+info: Unlinked ./public/main.css
+info: GET main.css complete
+info: GET /login
+info: [authenticate] Starting auth for test with password test
+error: [signInAccount][authenticateUser][fn] Error: Error: [authenticateUser] user: test not found in store.
+info: sending back {"name":"test","email":"test","hashPass":"8ed105d1c837880b8f3921f7493411a1a8ad3a801559658ac75bcfef65408e3c6bfb69aab8ef48abc1299f591bcc08039391bd724476e0ff581c75b4898b4dac"}
+info: [authenticate] Starting auth for test with password test
+info: [authenticateUser] user: test found in store. Verifying password.
+info: [verifyUserAccount] Auth succeeded for test with password test
+info: [verifyUserAccount] profile returned {"name":"test","email":"test"}
+info: sending back f{"name":"test","email":"test","hashPass":"8ed105d1c837880b8f3921f7493411a1a8ad3a801559658ac75bcfef65408e3c6bfb69aab8ef48abc1299f591bcc08039391bd724476e0ff581c75b4898b4dac"}
+info: regenerated session id oeO7EDnIfotn73QYjrPGFwDZ.DwwOltVZViW91r158eXNpPqeUxNvCsat5006/Y+yhDU
+info: Storing new hash for user test: 8ed105d1c837880b8f3921f7493411a1a8ad3a801559658ac75bcfef65408e3c6bfb69aab8ef48abc1299f591bcc08039391bd724476e0ff581c75b4898b4dac
+info: [purgatory] status true
+info: [authenticateUserByHash] Starting hash auth for test with hash 8ed105d1c837880b8f3921f7493411a1a8ad3a801559658ac75bcfef65408e3c6bfb69aab8ef48abc1299f591bcc08039391bd724476e0ff581c75b4898b4dac
+info: [authenticateUserByHash] user: test found in store. Verifying password.
+info: [authenticateUserByHash] user: test hash verified. Authenticated.
+info: [purgatory] out of purgatory
+info: Client 5597102537285537 setup for pub/sub
+info: Client 5597102537285537 subcribed to main topic
+info: Client 5597102537285537 connection setup.
+info: [purgatory] status false
+info: [handleMessage] routing message: {"event":"chat","data":"asdf"}
+info: [parseControlWordsFromChat] main topic
+info: [handleChat][createChat][fn] publishing to chat to topic main, {"id":1,"cid":"c1","attrs":{"id":1,"topic":"main","text":"asdf","user":"test","niceTime":"09:47:35 PM","time":1311828455533}}
+info: [handleChat][createChat][fn] saving to chat to topic main, {"id":1,"cid":"c1","attrs":{"id":1,"topic":"main","text":"asdf","user":"test","niceTime":"09:47:35 PM","time":1311828455533}}
+info: GET /login
+info: [authenticate] Starting auth for test with password test
+info: [authenticateUser] user: test found in store. Verifying password.
+info: [verifyUserAccount] Auth succeeded for test with password test
+info: [verifyUserAccount] profile returned {"name":"test","email":"test"}
+info: sending back f{"name":"test","email":"test","hashPass":"8ed105d1c837880b8f3921f7493411a1a8ad3a801559658ac75bcfef65408e3c6bfb69aab8ef48abc1299f591bcc08039391bd724476e0ff581c75b4898b4dac"}
+info: regenerated session id MUxbRgKLat4Wnx7ZVzpBIWk1.Qz+zV9BCSxJxug8SaJbdHxbXt2tcviJCdaumozZQZK4
+info: Storing new hash for user test: 8ed105d1c837880b8f3921f7493411a1a8ad3a801559658ac75bcfef65408e3c6bfb69aab8ef48abc1299f591bcc08039391bd724476e0ff581c75b4898b4dac
+info: [purgatory] status true
+info: [authenticateUserByHash] Starting hash auth for test with hash 8ed105d1c837880b8f3921f7493411a1a8ad3a801559658ac75bcfef65408e3c6bfb69aab8ef48abc1299f591bcc08039391bd724476e0ff581c75b4898b4dac
+info: [authenticateUserByHash] user: test found in store. Verifying password.
+info: [authenticateUserByHash] user: test hash verified. Authenticated.
+info: [purgatory] out of purgatory
+info: Client 2815609276294708 setup for pub/sub
+info: Client 2815609276294708 subcribed to main topic
+info: [connectedusers]test
+info: Client 2815609276294708 connection setup.
+info: [purgatory] status false
+info: [handleMessage] routing message: {"event":"chat","data":"asdf"}
+info: [parseControlWordsFromChat] main topic
+info: [handleChat][createChat][fn] publishing to chat to topic main, {"id":2,"cid":"c3","attrs":{"id":2,"topic":"main","text":"asdf","user":"test","niceTime":"09:47:44 PM","time":1311828464362}}
+info: [handleChat][createChat][fn] saving to chat to topic main, {"id":2,"cid":"c3","attrs":{"id":2,"topic":"main","text":"asdf","user":"test","niceTime":"09:47:44 PM","time":1311828464362}}
+info: [clientDisconnect] disconnecting client: 2815609276294708
