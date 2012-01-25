@@ -1,26 +1,9 @@
+
+*** THIS CODE IS OLD. ANCIENT! DEAD. DECEASED! ***
+
+Node.js is still rapidly evolving. Nodechat was written before some pretty heavy changes to socket.io and I didn't think it was worth it to update it. I revamped the tutorial code to use a simplified version and "retired" this version. 
+
 If you are following the tutorials on fzysqr.com, you may want the tutorial version of nodechat at https://github.com/jslatts/nodechat-tutorial.
-
-Visit http://nodechat.no.de/ to see this code in action. You can even ask node.js questions!
-
-Here is the roadmap. Any suggestions or bug fixes are welcome.
-
-LCOAL USAGE:
-
-    npm install
-    node server.js
-
-Open multiple browsers at http://localhost:8000
-
-TODO:
-
- - Total History
- - away messages
- - Flood control
- - User bans
-
-Horrible bugs:
-
- - user names with spaces can't be direct messaged
 
 
       bug with laser eyes   
